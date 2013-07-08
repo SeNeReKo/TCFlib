@@ -44,8 +44,14 @@ class Worker(object):
 
     """
 
-    def __init__(self, input_data):
+    __options__ = {}
+
+    def __init__(self, input_data, **options):
         self.input_data = input_data
+        if options:
+            self.options = argparse.Namespace()
+            vars(self.options).update(options)
+            logging.debug('Using options: {}'.format(self.options))
 
     def run(self):
         pass
@@ -57,7 +63,8 @@ class AddingWorker(Worker):
 
     """
 
-    def __init__(self, input_data):
+    def __init__(self, input_data, **options):
+        super().__init__(input_data, **options)
         self.tree = etree.ElementTree(etree.fromstring(input_data,
                                                        parser=tcf.parser))
         self.corpus = self.tree.xpath('/data:D-Spin/text:TextCorpus',
@@ -80,17 +87,30 @@ class ReplacingWorker(Worker):
     pass
 
 
-arg_parser = argparse.ArgumentParser()
-arg_parser.add_argument('-v', '--verbose', action='store_true')
-arg_parser.add_argument('-i', '--infile', default=sys.stdin.buffer,
-                        type=argparse.FileType('rb'))
-arg_parser.add_argument('-o', '--outfile', default=sys.stdout.buffer,
-                        type=argparse.FileType('wb'))
+def get_arg_parser(worker_class=None):
+    """Create an ArgumentParser with default options."""
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument('-v', '--verbose', action='store_true')
+    arg_parser.add_argument('-i', '--infile', default=sys.stdin.buffer,
+                            type=argparse.FileType('rb'))
+    arg_parser.add_argument('-o', '--outfile', default=sys.stdout.buffer,
+                            type=argparse.FileType('wb'))
+    if worker_class:
+        for key, value in worker_class.__options__.items():
+            arg_parser.add_argument('--' + key, default=value,
+                                    type=type(value))
+    return arg_parser
 
 
-def run_as_cli(worker_class, arg_parser=arg_parser):
+def run_as_cli(worker_class):
     # Parse commandline arguments
+    arg_parser = get_arg_parser(worker_class)
     args = arg_parser.parse_args()
+    # Find extra options that should be passed to worker
+    worker_args = vars(args).copy()
+    for key in list(worker_args.keys()):
+        if not key in worker_class.__options__:
+            del worker_args[key]
     # Set up logging
     if args.verbose:
         level = logging.DEBUG
@@ -100,6 +120,6 @@ def run_as_cli(worker_class, arg_parser=arg_parser):
     logging.basicConfig(level=level)
     # Run transformation
     input = args.infile.read()
-    worker = worker_class(input)
+    worker = worker_class(input, **worker_args)
     output = worker.run()
     args.outfile.write(output)
