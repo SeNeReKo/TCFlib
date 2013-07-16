@@ -48,10 +48,13 @@ class Worker(object):
 
     def __init__(self, input_data, **options):
         self.input_data = input_data
+        self.options = argparse.Namespace()
+        vars(self.options).update(self.__options__)
         if options:
-            self.options = argparse.Namespace()
             vars(self.options).update(options)
             logging.debug('Using options: {}'.format(self.options))
+        else:
+            logging.debug('Using default options: {}'.format(self.options))
 
     def run(self):
         pass
@@ -91,14 +94,19 @@ def get_arg_parser(worker_class=None):
     """Create an ArgumentParser with default options."""
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('-v', '--verbose', action='store_true')
-    arg_parser.add_argument('-i', '--infile', default=sys.stdin.buffer,
-                            type=argparse.FileType('rb'))
-    arg_parser.add_argument('-o', '--outfile', default=sys.stdout.buffer,
-                            type=argparse.FileType('wb'))
+    service_group = arg_parser.add_argument_group('Web service',
+            'Run as web service')
+    service_group.add_argument('-s', '--service', action='store_true')
+    service_group.add_argument('-p', '--port', type=int, default=8080)
+    cli_group = arg_parser.add_argument_group('Command line',
+            'Run as command line program')
+    cli_group.add_argument('-i', '--infile', default=sys.stdin.buffer,
+                           type=argparse.FileType('rb'))
+    cli_group.add_argument('-o', '--outfile', default=sys.stdout.buffer,
+                           type=argparse.FileType('wb'))
     if worker_class:
         for key, value in worker_class.__options__.items():
-            arg_parser.add_argument('--' + key, default=value,
-                                    type=type(value))
+            cli_group.add_argument('--' + key, default=value, type=type(value))
     return arg_parser
 
 
@@ -118,8 +126,23 @@ def run_as_cli(worker_class):
     else:
         level = logging.ERROR
     logging.basicConfig(level=level)
-    # Run transformation
-    input = args.infile.read()
-    worker = worker_class(input, **worker_args)
-    output = worker.run()
-    args.outfile.write(output)
+    # Run as service or cli program
+    if args.service:
+        run_as_service(worker_class, port=args.port)
+    else:
+        # Run transformation
+        input = args.infile.read()
+        worker = worker_class(input, **worker_args)
+        output = worker.run()
+        args.outfile.write(output)
+
+
+def run_as_service(worker_class, port):
+    from bottle import request, route, run
+
+    @route('/annotate', method='POST')
+    def annotate():
+        logging.debug('Got HTTP request.')
+        worker = worker_class(request.body.read(), **request.query)
+        return worker.run()
+    run(host='localhost', port=port)
