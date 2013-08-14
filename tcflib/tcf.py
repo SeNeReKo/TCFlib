@@ -154,6 +154,11 @@ class TCFElement(etree.ElementBase):
     """
     _position_xpath = etree.XPath('count(./preceding-sibling::*)+1',
                                   namespaces=NS)
+    PREFIX = 'x'
+
+    @property
+    def position(self):
+        return int(self._position_xpath(self))
 
     def get_value_list(self, name):
         """
@@ -190,6 +195,10 @@ class TCFElement(etree.ElementBase):
         """
         warn('Deprecated. Use `set_value_list` instead.', DeprecationWarning)
         self.set(name, ' '.join(iterable))
+
+    def add(self, element):
+        self.append(element)
+        element.set('ID', element.PREFIX + str(element.position))
 
 
 class CorpusElement(TCFElement):
@@ -251,6 +260,7 @@ class TokenElement(TCFElement):
                              'contains(concat(" ", @tokenIDs, " "),'
                              'concat(" ", $id, " "))][1]',
                              namespaces=NS)
+    PREFIX = 't'
 
     @property
     def postag(self):
@@ -338,7 +348,7 @@ class TagElement(AnnotationElement):
     Element class that represents a TCF POS tag.
 
     """
-    pass
+    PREFIX = 'pt'
 
 
 class LemmaElement(AnnotationElement):
@@ -346,7 +356,7 @@ class LemmaElement(AnnotationElement):
     Element class that represents a TCF lemma.
 
     """
-    pass
+    PREFIX = 'le'
 
 
 class EntityElement(AnnotationElement):
@@ -369,6 +379,7 @@ class ReferenceElement(AnnotationElement):
                                '@tokenIDs, " "),'
                                'concat(" ", @ID, " "))]',
                                namespaces=NS)
+    PREFIX = 'rc'
 
     def __str__(self):
         return ' '.join([str(token.lemma) for token in self.tokens])
@@ -390,6 +401,7 @@ class ParseElement(TCFElement):
                               namespaces=NS)
     _dependents_xpath = etree.XPath('text:dependency[@govIDs = $head]/@depIDs',
                                     namespaces=NS)
+    PREFIX = 'd'
 
     @property
     def root(self):
@@ -438,10 +450,9 @@ class NodesElement(TCFElement):
         return None
 
     def add_node(self, label):
-        node = etree.SubElement(self, P_TEXT + 'node')
-        position = int(self._position_xpath(node))
+        node = Element(P_TEXT + 'node')
         node.text = str(label)
-        node.set('ID', 'n_{}'.format(position))
+        self.add(node)
         return node
 
 
@@ -463,12 +474,19 @@ class EdgesElement(TCFElement):
             return None
 
     def add_edge(self, a, b, **attribs):
-        edge = etree.SubElement(self, P_TEXT + 'edge', **attribs)
-        position = int(self._position_xpath(edge))
+        edge = Element(P_TEXT + 'edge', **attribs)
         edge.set('source', a)
         edge.set('target', b)
-        edge.set('ID', 'e_{}'.format(position))
+        self.add(edge)
         return edge
+
+
+class NodeElement(TCFElement):
+    PREFIX = 'n'
+
+
+class EdgeElement(TCFElement):
+    PREFIX = 'e'
 
 
 # Set up lookup scheme
@@ -488,6 +506,8 @@ text_namespace['parse'] = ParseElement
 text_namespace['graph'] = GraphElement
 text_namespace['nodes'] = NodesElement
 text_namespace['edges'] = EdgesElement
+text_namespace['node'] = NodeElement
+text_namespace['edge'] = EdgeElement
 
 Element = parser.makeelement
 SubElement = etree.SubElement
