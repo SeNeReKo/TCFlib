@@ -41,7 +41,7 @@ class POSTag(POSTagBase):
         'http://www.isocat.org/datcat/DC-1260',  # conjunction
         'http://www.isocat.org/datcat/DC-2998',  # pronominal adverb
         'http://www.isocat.org/datcat/DC-1370',  # pronoun
-        'http://www.isocat.org/datcat/DC-1244',  # auxiliary
+        'http://www.isocat.org/datcat/DC-1263',  # copula
         'http://www.isocat.org/datcat/DC-1329',  # modal
         ]
 

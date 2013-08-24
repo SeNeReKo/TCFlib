@@ -44,6 +44,7 @@ class STTag(MappingTag, POSTag):
         'APZR': 'http://www.isocat.org/datcat/DC-1906',  # circumposition
         'ART': 'http://www.isocat.org/datcat/DC-1892',  # article
         'CARD': 'http://www.isocat.org/datcat/DC-1334',  # numeral
+        'FM': 'http://www.isocat.org/datcat/DC-1891',  # unclassifiedResidual
         'ITJ': 'http://www.isocat.org/datcat/DC-1318',  # interjection
         'KOKOM': 'http://www.isocat.org/datcat/DC-1922',  # comparativeParticle
         'KON': 'http://www.isocat.org/datcat/DC-1262',  # coordinatingConjunction
@@ -73,10 +74,10 @@ class STTag(MappingTag, POSTag):
         'PWAV': 'http://www.isocat.org/datcat/DC-1380',  # relativePronoun
         'PWS': 'http://www.isocat.org/datcat/DC-1321',  # interrogativePronoun
         'TRUNC': 'http://www.isocat.org/datcat/DC-1897',  # unclassifiedParticle # FIXME
-        'VAFIN': 'http://www.isocat.org/datcat/DC-1244',  # auxiliary
-        'VAIMP': 'http://www.isocat.org/datcat/DC-1244',  # auxiliary
-        'VAINF': 'http://www.isocat.org/datcat/DC-1244',  # auxiliary
-        'VAPP': 'http://www.isocat.org/datcat/DC-1244',  # auxiliary
+        'VAFIN': 'http://www.isocat.org/datcat/DC-1263',  # copula
+        'VAIMP': 'http://www.isocat.org/datcat/DC-1263',  # copula
+        'VAINF': 'http://www.isocat.org/datcat/DC-1263',  # copula
+        'VAPP': 'http://www.isocat.org/datcat/DC-1263',  # copula
         'VMFIN': 'http://www.isocat.org/datcat/DC-1329',  # modal
         'VMINF': 'http://www.isocat.org/datcat/DC-1329',  # modal
         'VMPP': 'http://www.isocat.org/datcat/DC-1329',  # modal
