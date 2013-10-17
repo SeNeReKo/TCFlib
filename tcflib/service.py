@@ -106,7 +106,13 @@ def get_arg_parser(worker_class=None):
                            type=argparse.FileType('wb'))
     if worker_class:
         for key, value in worker_class.__options__.items():
-            cli_group.add_argument('--' + key, default=value, type=type(value))
+            if isinstance(value, list):
+                vtype = type(value[0])
+                cli_group.add_argument('--' + key, default=value, type=vtype,
+                                       nargs='*')
+            else:
+                cli_group.add_argument('--' + key, default=value,
+                                       type=type(value))
     return arg_parser
 
 
