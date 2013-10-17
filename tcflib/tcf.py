@@ -405,7 +405,20 @@ class ParseElement(TCFElement):
 
     @property
     def root(self):
-        return self._root_xpath(self)[0]
+        try:
+            return self._root_xpath(self)[0]
+        except IndexError:
+            # Got no explicit root, find out.
+            deps = self.xpath('text:dependency/@depIDs', namespaces=NS)
+            govs = self.xpath('text:dependency/@govIDs', namespaces=NS)
+            roots = set(govs) - set(deps)
+            if len(roots) != 1:
+                import logging, sys
+                logging.error('Could not find root for parse #{}.'.format(
+                              parse.position))
+                sys.exit(-1)
+            for root in roots:
+                return root
 
     def find_dependents(self, head):
         dependents = self._dependents_xpath(self, head=head)
