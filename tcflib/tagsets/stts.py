@@ -86,7 +86,7 @@ class STTag(MappingTag, POSTag):
         'VVINF': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
         'VVIZU': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
         'VVPP': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
-        'XY': 'http://www.isocat.org/datcat/DC-2277',  # massNoun # FIXME
+        'XY': 'http://www.isocat.org/datcat/DC-1891',  # unclassifiedResidual
     }
     pid2name = {v: k for k, v in name2pid.items()}
 
