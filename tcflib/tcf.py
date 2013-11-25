@@ -392,6 +392,30 @@ class ReferenceElement(AnnotationElement):
             return super().tokens
 
 
+class TextspanElement(TCFElement):
+    """
+    Element class that represents a TCF text span.
+    
+    """
+    _token_xpath = etree.XPath('/data:D-Spin/text:TextCorpus/'
+                               'text:tokens/text:token[@ID = $id][1]',
+                               namespaces=NS)
+    _following_token_xpath = etree.XPath('following-sibling::text:token',
+                                         namespaces=NS)
+    PREFIX = 'ts'
+
+    @property
+    def tokens(self):
+        tokens = []
+        first_token = self._token_xpath(self, id=self.get('start'))[0]
+        tokens.append(first_token)
+        for token in self._following_token_xpath(first_token):
+            tokens.append(token)
+            if token.get('ID') == self.get('end'):
+                break
+        return tokens
+
+
 class ParseElement(TCFElement):
     """
     Element class that represents a TCF dependency parse.
@@ -515,6 +539,7 @@ text_namespace['tag'] = TagElement
 text_namespace['lemma'] = LemmaElement
 text_namespace['entity'] = EntityElement
 text_namespace['reference'] = ReferenceElement
+text_namespace['textspan'] = TextspanElement
 text_namespace['parse'] = ParseElement
 text_namespace['graph'] = GraphElement
 text_namespace['nodes'] = NodesElement
