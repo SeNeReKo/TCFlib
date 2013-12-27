@@ -336,7 +336,7 @@ class AnnotationElement(TCFElement):
                                namespaces=NS)
 
     def __str__(self):
-        return self.text
+        return self.text or ''
 
     @property
     def tokens(self):
