@@ -43,6 +43,8 @@ class POSTag(POSTagBase):
         'http://www.isocat.org/datcat/DC-1370',  # pronoun
         'http://www.isocat.org/datcat/DC-1263',  # copula
         'http://www.isocat.org/datcat/DC-1329',  # modal
+        'http://www.isocat.org/datcat/DC-1891',  # unclassified residual
+        'http://www.isocat.org/datcat/DC-1908',  # unspecified
         ]
 
 
