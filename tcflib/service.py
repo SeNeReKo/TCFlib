@@ -140,7 +140,8 @@ def run_as_cli(worker_class):
         input = args.infile.read()
         worker = worker_class(input, **worker_args)
         output = worker.run()
-        args.outfile.write(output)
+        if output:
+            args.outfile.write(output)
 
 
 def run_as_service(worker_class, port):
