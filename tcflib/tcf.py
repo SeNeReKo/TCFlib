@@ -409,6 +409,8 @@ class TextspanElement(TCFElement):
         tokens = []
         first_token = self._token_xpath(self, id=self.get('start'))[0]
         tokens.append(first_token)
+        if self.get('start') == self.get('end'):
+            return tokens
         for token in self._following_token_xpath(first_token):
             tokens.append(token)
             if token.get('ID') == self.get('end'):
