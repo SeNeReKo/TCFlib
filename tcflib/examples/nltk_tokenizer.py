@@ -56,7 +56,9 @@ def listsplit(sourcelist, delimiter):
             result.append(sourcelist[start:position])
             start = position + 1
         except ValueError:
-            result.append(sourcelist[start:])
+            tail = sourcelist[start:]
+            if tail:
+                result.append(tail)
             break
     return result
 
@@ -91,9 +93,6 @@ class NltkTokenizer(AddingWorker):
                 sentence_elem = SubElement(sentences_elem, P_TEXT + 'sentence',
                                            ID='s_{}'.format(i),
                                            tokenIDs=' '.join(sent_word_ids))
-            if not par_word_ids:
-                # Empty paragraph
-                continue
             span_elem = SubElement(structure_elem, P_TEXT + 'textspan',
                                    start=par_word_ids[0], end=par_word_ids[-1],
                                    type='paragraph')
