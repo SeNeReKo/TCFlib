@@ -75,7 +75,8 @@ class AddingWorker(Worker):
         self.corpus = self.tree.xpath('/data:D-Spin/text:TextCorpus',
                                       namespaces=tcf.NS)[0]
         self.add_annotations()
-        return etree.tostring(self.tree, encoding='utf8', pretty_print=True)
+        return etree.tostring(self.tree, encoding='utf8', pretty_print=True,
+                              xml_declaration=True)
 
     def add_annotations(self):
         pass
