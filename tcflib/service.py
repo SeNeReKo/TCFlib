@@ -30,6 +30,7 @@ import sys
 import argparse
 import logging
 
+import requests
 from lxml import etree
 
 from tcflib import tcf
@@ -46,8 +47,7 @@ class Worker(object):
 
     __options__ = {}
 
-    def __init__(self, input_data, **options):
-        self.input_data = input_data
+    def __init__(self, **options):
         self.options = argparse.Namespace()
         vars(self.options).update(self.__options__)
         if options:
@@ -56,7 +56,10 @@ class Worker(object):
         else:
             logging.debug('Using default options: {}'.format(self.options))
 
-    def run(self):
+    def __ror__(self, input_data):
+        return self.run(input_data)
+
+    def run(self, input_data):
         pass
 
 
@@ -66,14 +69,11 @@ class AddingWorker(Worker):
 
     """
 
-    def __init__(self, input_data, **options):
-        super().__init__(input_data, **options)
+    def run(self, input_data):
         self.tree = etree.ElementTree(etree.fromstring(input_data,
                                                        parser=tcf.parser))
         self.corpus = self.tree.xpath('/data:D-Spin/text:TextCorpus',
                                       namespaces=tcf.NS)[0]
-
-    def run(self):
         self.add_annotations()
         return etree.tostring(self.tree, encoding='utf8', pretty_print=True)
 
@@ -88,6 +88,22 @@ class ReplacingWorker(Worker):
 
     """
     pass
+
+
+class Write(object):
+
+    def __init__(self, filename):
+        self.filename = filename
+
+    def __ror__(self, input_data):
+        if input_data:
+            with open(self.filename, 'wb') as outfile:
+                outfile.write(input_data)
+
+
+def Read(filename):
+    with open(filename, 'rb') as infile:
+        return infile.read()
 
 
 def get_arg_parser(worker_class=None):
@@ -137,9 +153,9 @@ def run_as_cli(worker_class):
         run_as_service(worker_class, port=args.port)
     else:
         # Run transformation
-        input = args.infile.read()
-        worker = worker_class(input, **worker_args)
-        output = worker.run()
+        input_data = args.infile.read()
+        worker = worker_class(**worker_args)
+        output = worker.run(input_data)
         if output:
             args.outfile.write(output)
 
@@ -150,6 +166,6 @@ def run_as_service(worker_class, port):
     @route('/annotate', method='POST')
     def annotate():
         logging.debug('Got HTTP request.')
-        worker = worker_class(request.body.read(), **request.query)
-        return worker.run()
+        worker = worker_class(**request.query)
+        return worker.run(request.body.read())
     run(host='localhost', port=port)
