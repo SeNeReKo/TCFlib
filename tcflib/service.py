@@ -90,6 +90,26 @@ class ReplacingWorker(Worker):
     pass
 
 
+class RemoteWorker(Worker):
+    """
+    A `RemoteWorker` defers the actual work to a web service.
+
+    """
+
+    url = ''
+
+    def __init__(self, **options):
+        if 'url' in options:
+            self.url = options['url']
+            del options['url']
+        super().__init__(**options)
+
+    def run(self, input_data):
+        response = requests.post(self.url, params=vars(self.options),
+                                 data=input_data)
+        return response.content
+
+
 class Write(object):
 
     def __init__(self, filename):
