@@ -75,24 +75,19 @@ class NltkTokenizer(AddingWorker):
         text = self.corpus.find(P_TEXT + 'text').text
         paragraphs = listsplit(text.splitlines(), '')
         paragraphs = ['\n'.join(lines) for lines in paragraphs]
-        i = -1
-        j = -1
         for paragraph in paragraphs:
             par_word_ids = []
-            for i, sentence in enumerate(sent_tokenize(paragraph),
-                                         start=i + 1):
+            for sentence in sent_tokenize(paragraph):
                 sent_word_ids = []
-                for j, word in enumerate(word_tokenize(sentence),
-                                         start=j + 1):
-                    word_id = 't_{}'.format(j)
-                    sent_word_ids.append(word_id)
-                    token_elem = SubElement(tokens_elem, P_TEXT + 'token',
-                                                         ID=word_id)
+                for word in word_tokenize(sentence):
+                    token_elem = Element(P_TEXT + 'token')
                     token_elem.text = word
+                    token_id = tokens_elem.add(token_elem)
+                    sent_word_ids.append(token_id)
                 par_word_ids.extend(sent_word_ids)
-                sentence_elem = SubElement(sentences_elem, P_TEXT + 'sentence',
-                                           ID='s_{}'.format(i),
-                                           tokenIDs=' '.join(sent_word_ids))
+                sentence_elem = Element(P_TEXT + 'sentence')
+                sentence_elem.set_value_list('tokenIDs', sent_word_ids)
+                sentences_elem.add(sentence_elem)
             span_elem = SubElement(structure_elem, P_TEXT + 'textspan',
                                    start=par_word_ids[0], end=par_word_ids[-1],
                                    type='paragraph')

@@ -197,8 +197,10 @@ class TCFElement(etree.ElementBase):
         self.set(name, ' '.join(iterable))
 
     def add(self, element):
+        eid = element.PREFIX + str(len(self))
+        element.set('ID', eid)
         self.append(element)
-        element.set('ID', element.PREFIX + str(element.position))
+        return eid
 
 
 class CorpusElement(TCFElement):
@@ -341,6 +343,14 @@ class AnnotationElement(TCFElement):
     @property
     def tokens(self):
         return self._tokens_xpath(self, ids=self.get('tokenIDs'))
+
+
+class SentenceElement(AnnotationElement):
+    """
+    Element class that represents a TCF sentence.
+
+    """
+    PREFIX = 's'
 
 
 class TagElement(AnnotationElement):
@@ -537,6 +547,7 @@ text_namespace = lookup.get_namespace(NS_TEXT)
 text_namespace[None] = TCFElement
 text_namespace['TextCorpus'] = CorpusElement
 text_namespace['token'] = TokenElement
+text_namespace['sentence'] = SentenceElement
 text_namespace['tag'] = TagElement
 text_namespace['lemma'] = LemmaElement
 text_namespace['entity'] = EntityElement
