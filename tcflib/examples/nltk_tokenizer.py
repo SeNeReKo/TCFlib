@@ -29,7 +29,8 @@ detection.
 
 """
 
-from nltk import sent_tokenize, word_tokenize
+from nltk import sent_tokenize
+from nltk.tokenize import wordpunct_tokenize as word_tokenize
 
 from tcflib.tcf import P_TEXT, Element, SubElement
 from tcflib.service import AddingWorker, run_as_cli
@@ -38,12 +39,12 @@ from tcflib.service import AddingWorker, run_as_cli
 def listsplit(sourcelist, delimiter):
     """
     Splits a list at a given delimiter. Returns a list of lists.
-    
+
     Example:
     >>> l = ['a', '', 'b', 'c', '', '', 'd']
     >>> listsplit(l, '')
     [['a'], ['b', 'c'], ['d']]
-    
+
     """
     result = []
     start = 0
