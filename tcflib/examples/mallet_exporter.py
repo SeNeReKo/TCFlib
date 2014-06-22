@@ -62,33 +62,26 @@ class MalletExporter(ReplacingWorker):
 
     def run(self, input_data):
         # ReplacingWorker gets XML input as raw data.
-        # Parse XML input with tcf.parser to get additional API sugar.
-        tree = etree.ElementTree(etree.fromstring(input_data,
-                                 parser=tcf.parser))
-        # Trees use the normal lxml API, e.g. for XPath queries.
-        corpus = tree.xpath('/data:D-Spin/text:TextCorpus',
-                            namespaces=tcf.NS)[0]
+        # Parse XML input into data structures.
+        corpus = tcf.parse(input_data)
         # Use TagSet API for token filtering
         if self.options.postags[0]:
             postags = [ISOcat[postag] for postag in self.options.postags]
             tokenfilter = posfilter(postags)
         else:
             tokenfilter = lambda token: not token.postag.is_closed
-        # Use lxml XPath API for specific queries.
+        # The textstructure layer can be used like a list:
         if self.options.spantype:
-            textspans = tree.xpath('//text:textspan[@type = $type]',
-                                   type=self.options.spantype,
-                                   namespaces=tcf.NS)
+            textspans = [span for span in corpus.textstructure
+                         if span.type == self.options.spantype]
         else:
-            textspans = tree.xpath('//text:textspan',
-                                   namespaces=tcf.NS)
+            textspans = corpus.textstructure
         # Do the actual work. This mallet output uses lemma as token value.
-        lang = corpus.get('lang', 'xx')
         output = []
         for i, span in enumerate(textspans, start=1):
-            words = [str(token.lemma) for token in span.tokens
+            words = [token.lemma for token in span.tokens
                      if tokenfilter(token)]
-            output.append('{} {} {}\n'.format(i, lang, ' '.join(words)))
+            output.append('{} {} {}\n'.format(i, corpus.lang, ' '.join(words)))
         # ReplacingWorker returns output as raw data.
         return ''.join(output).encode('utf8')
 
