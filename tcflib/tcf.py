@@ -26,7 +26,7 @@ This module provides an API for TCF documents.
 
 """
 
-from collections import UserDict, OrderedDict
+from collections import UserList, UserDict, OrderedDict
 from warnings import warn
 
 from lxml import etree
@@ -40,7 +40,18 @@ P_TEXT = '{' + NS_TEXT + '}'
 NS = {'data': NS_DATA, 'text': NS_TEXT}
 
 
-class AnnotationLayer(UserDict):
+class AnnotationLayer(UserList):
+
+    element = ''
+
+    @property
+    def tcf(self):
+        elem = etree.Element(P_TEXT + self.element)
+        for child in self.data:
+            elem.append(child.tcf)
+
+
+class AnnotationLayerWithIDs(UserDict):
 
     element = ''
 
@@ -56,6 +67,9 @@ class AnnotationLayer(UserDict):
         item.parent = self
         self.data[key] = item
 
+    def keys(self):
+        return self.data.keys()
+
     def append(self, item):
         item.parent = self
         key = '{}_{}'.format(item.prefix, len(self.data))
@@ -65,8 +79,9 @@ class AnnotationLayer(UserDict):
     def tcf(self):
         elem = etree.Element(P_TEXT + self.element)
         for key, child in self.data.items():
-            child_elem = etree.SubElement(elem, child.tcf)
+            child_elem = child.tcf
             child_elem.set('ID', key)
+            elem.append(child_elem)
         return elem
 
 
@@ -103,13 +118,17 @@ class TextCorpus:
     A TextCorpus consists of a series of AnnotationLayers.
 
     """
+
+    def __init__(self, lang=None):
+        self.lang = lang
+
     def find_token(self, token_id):
         warn('TextCorpus.find_token() is deprecated. '
              'Use TextCorpus.tokens.get() instead.')
         return self.tokens.get(token_id)
 
 
-class Tokens(AnnotationLayer):
+class Tokens(AnnotationLayerWithIDs):
     element = 'tokens'
 
     def __init__(self, initialdata=None):
@@ -160,7 +179,7 @@ class Token(AnnotationElement):
             return self.lemma
 
 
-class Sentences(AnnotationLayer):
+class Sentences(AnnotationLayerWithIDs):
 
     element = 'sentences'
 
@@ -174,14 +193,28 @@ class Sentence(AnnotationElement):
     prefix = 's'
 
 
+class TextStructure(AnnotationLayer):
+
+    element = 'textstructure'
+
+
+class TextSpan(AnnotationElement):
+
+    element = 'textspan'
+    prefix = 'ts'
+
+    def __init__(self):
+        super().__init__()
+        self.type = None
+
 
 def parse(input_data, layers=None):
-    corpus = TextCorpus()
     parser = etree.XMLParser(remove_blank_text=True)
     root = etree.fromstring(input_data, parser=parser)
     tree = etree.ElementTree(root)
     corpus_elem = tree.xpath('/data:D-Spin/text:TextCorpus',
                                 namespaces=NS)[0]
+    corpus = TextCorpus(lang=corpus_elem.get('lang'))
     if layers:
         layer_elems = [corpus_elem.find(P_TEXT + layer) for layer in layers]
     else:
@@ -210,4 +243,24 @@ def parse(input_data, layers=None):
             for tag_elem in layer_elem:
                 for token_id in tag_elem.get('tokenIDs').split():
                     corpus.tokens[token_id].tag = tag_elem.text
+        elif tag == 'textstructure':
+            corpus.textstructure = TextStructure()
+            for span_elem in layer_elem:
+                if not 'start' in span_elem.attrib:
+                    # The TCF example contains textspans with no start or end
+                    # attribute. The meaning of those is unclear, we skip them
+                    # here.
+                    continue
+                span = TextSpan()
+                if 'type' in span_elem.attrib:
+                    span.type = span_elem.get('type')
+                span.tokens = []
+                start = span_elem.get('start')
+                end = span_elem.get('end')
+                keys = list(corpus.tokens.keys())
+                for key in keys[keys.index(start):]:
+                    span.tokens.append(corpus.tokens.get(key))
+                    if key == end:
+                        break
+                corpus.textstructure.append(span)
     return corpus
