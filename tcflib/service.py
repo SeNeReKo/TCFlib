@@ -46,6 +46,7 @@ class Worker(object):
     """
 
     __options__ = {}
+    layers = None
 
     def __init__(self, **options):
         self.options = argparse.Namespace()
@@ -70,25 +71,31 @@ class AddingWorker(Worker):
     """
 
     def run(self, input_data):
-        self.tree = etree.ElementTree(etree.fromstring(input_data,
-                                                       parser=tcf.parser))
-        self.corpus = self.tree.xpath('/data:D-Spin/text:TextCorpus',
-                                      namespaces=tcf.NS)[0]
+        self.corpus = tcf.TextCorpus(input_data, layers=self.layers)
         self.add_annotations()
-        return etree.tostring(self.tree, encoding='utf8', pretty_print=True,
-                              xml_declaration=True)
+        return self.corpus.xml
 
     def add_annotations(self):
         pass
 
 
-class ReplacingWorker(Worker):
+class ImportingWorker(Worker):
     """
-    A `ReplacingWorker` replaces input data by its own data. Used for importers
-    and exporters.
+    An `ImportingWorker` converts input data to TCF.
 
     """
     pass
+
+
+class ExportingWorker(Worker):
+    """
+    A `ExportingWorker` converts TCF data into other formats.
+
+    """
+
+    def run(self, input_data):
+        self.corpus = tcf.TextCorpus(input_data, layers=self.layers)
+        return self.export()
 
 
 class RemoteWorker(Worker):

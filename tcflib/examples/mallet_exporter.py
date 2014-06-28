@@ -31,7 +31,7 @@ from collections import Counter
 from lxml import etree
 from tcflib import tcf
 from tcflib.tagsets import TagSet
-from tcflib.service import ReplacingWorker, run_as_cli
+from tcflib.service import ExportingWorker, run_as_cli
 
 # Use ISOcat/MAF as reference tagset.
 ISOcat = TagSet('DC-1345')
@@ -49,7 +49,7 @@ def posfilter(postags):
     return pfilter
 
 
-class MalletExporter(ReplacingWorker):
+class MalletExporter(ExportingWorker):
 
     # Define configuration options. They work both as command line arguments:
     # ./tcf2mallet.py --spantype paragraph --postags "noun" "verb" "adjective"
@@ -59,11 +59,11 @@ class MalletExporter(ReplacingWorker):
         'spantype': '',
         'postags': [''],
     }
+    layers = ['tokens', 'POStags', 'lemmas', 'textstructure']
 
-    def run(self, input_data):
-        # ReplacingWorker gets XML input as raw data.
-        # Parse XML input into data structures.
-        corpus = tcf.parse(input_data)
+    def export(self):
+        # ExportingWorker just has to override `export()` to return the target
+        # Format as bytes. It can access `self.corpus` like an `AddingWorker`.
         # Use TagSet API for token filtering
         if self.options.postags[0]:
             postags = [ISOcat[postag] for postag in self.options.postags]
@@ -72,16 +72,17 @@ class MalletExporter(ReplacingWorker):
             tokenfilter = lambda token: not token.postag.is_closed
         # The textstructure layer can be used like a list:
         if self.options.spantype:
-            textspans = [span for span in corpus.textstructure
+            textspans = [span for span in self.corpus.textstructure
                          if span.type == self.options.spantype]
         else:
-            textspans = corpus.textstructure
+            textspans = self.corpus.textstructure
         # Do the actual work. This mallet output uses lemma as token value.
         output = []
         for i, span in enumerate(textspans, start=1):
             words = [token.lemma for token in span.tokens
                      if tokenfilter(token)]
-            output.append('{} {} {}\n'.format(i, corpus.lang, ' '.join(words)))
+            output.append('{} {} {}\n'.format(i, self.corpus.lang,
+                                              ' '.join(words)))
         # ReplacingWorker returns output as raw data.
         return ''.join(output).encode('utf8')
 

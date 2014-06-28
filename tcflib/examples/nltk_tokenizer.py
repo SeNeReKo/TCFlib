@@ -32,7 +32,8 @@ detection.
 from nltk import sent_tokenize
 from nltk.tokenize import wordpunct_tokenize as word_tokenize
 
-from tcflib.tcf import P_TEXT, Element, SubElement
+from tcflib.tcf import (P_TEXT, Tokens, Token, Sentences, Sentence,
+                        TextStructure, TextSpan)
 from tcflib.service import AddingWorker, run_as_cli
 
 
@@ -67,31 +68,25 @@ def listsplit(sourcelist, delimiter):
 class NltkTokenizer(AddingWorker):
 
     def add_annotations(self):
-        # Add base elements
-        tokens_elem = SubElement(self.corpus, P_TEXT + 'tokens')
-        sentences_elem = SubElement(self.corpus, P_TEXT + 'sentences')
-        structure_elem = SubElement(self.corpus, P_TEXT + 'textstructure')
+        # Add base layers
+        self.corpus.tokens = Tokens()
+        self.corpus.sentences = Sentences()
+        self.corpus.textstructure = TextStructure()
         # Parse text
-        #text = self.corpus.text.text
-        text = self.corpus.find(P_TEXT + 'text').text
+        text = self.corpus.text
         paragraphs = listsplit(text.splitlines(), '')
         paragraphs = ['\n'.join(lines) for lines in paragraphs]
         for paragraph in paragraphs:
-            par_word_ids = []
-            for sentence in sent_tokenize(paragraph):
-                sent_word_ids = []
-                for word in word_tokenize(sentence):
-                    token_elem = Element(P_TEXT + 'token')
-                    token_elem.text = word
-                    token_id = tokens_elem.add(token_elem)
-                    sent_word_ids.append(token_id)
-                par_word_ids.extend(sent_word_ids)
-                sentence_elem = Element(P_TEXT + 'sentence')
-                sentence_elem.set_value_list('tokenIDs', sent_word_ids)
-                sentences_elem.add(sentence_elem)
-            span_elem = SubElement(structure_elem, P_TEXT + 'textspan',
-                                   start=par_word_ids[0], end=par_word_ids[-1],
-                                   type='paragraph')
+            textspan = TextSpan(type='paragraph')
+            for sent in sent_tokenize(paragraph):
+                sentence = Sentence()
+                for word in word_tokenize(sent):
+                    token = Token(word)
+                    self.corpus.tokens.append(token)
+                    sentence.tokens.append(token)
+                    textspan.tokens.append(token)
+                self.corpus.sentences.append(sentence)
+            self.corpus.textstructure.append(textspan)
 
 if __name__ == '__main__':
     run_as_cli(NltkTokenizer)    
