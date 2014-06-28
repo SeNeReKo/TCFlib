@@ -30,6 +30,11 @@ from collections import UserList, UserDict, OrderedDict
 from warnings import warn
 
 from lxml import etree
+try:
+    import igraph
+except:
+    pass
+
 
 from tcflib.tagsets import TagSet
 
@@ -235,13 +240,8 @@ class Token(AnnotationElement):
         semantic unit.
 
         """
-        # TODO: Revise!
-        if self.named_entity is not None:
-            return self.named_entity
-        elif self.reference is not None:
-            return self.reference
-        else:
-            return self.lemma
+        # TODO: Add named entity and reference support
+        return self.lemma or self.text
 
 
 class Sentences(AnnotationLayerWithIDs):
@@ -283,3 +283,86 @@ class TextSpan(AnnotationElement):
         element = super().tcf
         element.set('tokenIDs', ' '.join([token.id for token in self.tokens]))
         return element
+
+class Graph(AnnotationLayerBase):
+
+    element = 'graph'
+
+    def __init__(self):
+        try:
+            self._graph = igraph.Graph()
+        except NameError:
+            logging.warn('The igraph package has to be installed to use the '
+                         'graph annotation layer.')
+            raise
+        self._graph.vs['name'] = ''  # Ensure 'name' attribute is present.
+
+    @property
+    def nodes(self):
+        return self._graph.vs
+
+    @property
+    def edges(self):
+        return self._graph.es
+
+    def add_node(self, name, **attr):
+        if not name in self._graph.vs['name']:
+            self._graph.add_vertex(name, **attr)
+        return self.node(name)
+
+    def add_edge(self, source, target, weight=1, **attr):
+        self._graph.add_edge(source, target, weight=weight, **attr)
+        try:
+            return self.edge(source, target)
+        except:
+            print(source, target)
+            raise
+
+    def node(self, name):
+        if isinstance(name, igraph.Vertex):
+            # It should be safe to call node() with a node as argument.
+            return name
+        try:
+            return self._graph.vs.find(name)
+        except (IndexError, ValueError):
+            return None
+
+    def edge(self, source, target):
+        source = self.node(source)
+        target = self.node(target)
+        return self._graph.es.find(_within=(source.index, target.index))
+
+    @property
+    def tcf(self):
+        graph = etree.Element(P_TEXT + 'graph')
+        nodes = etree.SubElement(graph, P_TEXT + 'nodes')
+        edges = etree.SubElement(graph, P_TEXT + 'edges')
+        nid = 'n_{}'
+        # simplify the graph, i.e., merge
+        self._graph.simplify(combine_edges={'weight': sum,
+                             'tokenIDs': lambda x: ' '.join(x)})
+        for vertex in self._graph.vs:
+            node = etree.SubElement(nodes, P_TEXT + 'node')
+            node.text = vertex['name']
+            node.set('ID', nid.format(vertex.index))
+            for key, value in vertex.attributes().items():
+                if key == 'name':
+                    continue
+                elif isinstance(value, (list, tuple)):
+                    node.set(key, ' '.join(value))
+                elif isinstance(value, bool):
+                    node.set(key, str(value).lower())
+                else:
+                    node.set(key, str(value))
+        for link in self._graph.es:
+            edge = etree.SubElement(edges, P_TEXT + 'edges',
+                                    source=nid.format(link.source),
+                                    target=nid.format(link.target))
+            for key, value in link.attributes().items():
+                if isinstance(value, (list, tuple)):
+                    edge.set(key, ' '.join(value))
+                elif isinstance(value, bool):
+                    edge.set(key, str(value).lower())
+                else:
+                    edge.set(key, str(value))
+        return graph
