@@ -40,20 +40,22 @@ P_TEXT = '{' + NS_TEXT + '}'
 NS = {'data': NS_DATA, 'text': NS_TEXT}
 
 
-class AnnotationLayer(UserList):
+class AnnotationLayerBase:
 
     element = ''
 
     @property
     def tcf(self):
         elem = etree.Element(P_TEXT + self.element)
-        for child in self.data:
+        for child in self:
             elem.append(child.tcf)
+        return elem
 
 
-class AnnotationLayerWithIDs(UserDict):
+class AnnotationLayer(AnnotationLayerBase, UserList):
+    pass
 
-    element = ''
+class AnnotationLayerWithIDs(AnnotationLayerBase, UserDict):
 
     def __init__(self, initialdata=None):
         self.data = OrderedDict()
@@ -65,24 +67,17 @@ class AnnotationLayerWithIDs(UserDict):
 
     def __setitem__(self, key, item):
         item.parent = self
+        item.id = key
         self.data[key] = item
 
     def keys(self):
         return self.data.keys()
 
     def append(self, item):
-        item.parent = self
         key = '{}_{}'.format(item.prefix, len(self.data))
+        item.parent = self
+        item.id = key
         self.data[key] = item
-
-    @property
-    def tcf(self):
-        elem = etree.Element(P_TEXT + self.element)
-        for key, child in self.data.items():
-            child_elem = child.tcf
-            child_elem.set('ID', key)
-            elem.append(child_elem)
-        return elem
 
 
 class AnnotationElement:
@@ -92,24 +87,16 @@ class AnnotationElement:
 
     def __init__(self):
         self.parent = None
+        self.id = None
         self.tokens = []
 
     @property
     def tcf(self):
-        raise NotImplementedError
+        element = etree.Element(P_TEXT + self.element)
+        if self.id is not None:
+            element.set('ID', self.id)
+        return element
 
-
-class SimpleAnnotationElement(AnnotationElement):
-
-    def __init__(self, text):
-        super().__init__()
-        self.text = text
-
-    @property
-    def tcf(self):
-        elem = etree.Element(P_TEXT + self.element)
-        elem.text = self.text
-        return elem
 
 class TextCorpus:
     """
@@ -119,8 +106,80 @@ class TextCorpus:
 
     """
 
-    def __init__(self, lang=None):
-        self.lang = lang
+    def __init__(self, input_data, *, layers=None):
+        self.new_layers = []
+        # Parse input data.
+        parser = etree.XMLParser(remove_blank_text=True)
+        root = etree.fromstring(input_data, parser=parser)
+        self.tree = etree.ElementTree(root)
+        corpus_elem = self.tree.xpath('/data:D-Spin/text:TextCorpus',
+                                      namespaces=NS)[0]
+        self.lang = corpus_elem.get('lang')
+        if layers:
+            layer_elems = [corpus_elem.find(P_TEXT + layer) for layer in layers]
+        else:
+            layer_elems = corpus_elem
+        for layer_elem in layer_elems:
+            tag = etree.QName(layer_elem).localname
+            if tag == 'text':
+                self.text = layer_elem.text
+            elif tag == 'tokens':
+                self.tokens = Tokens()
+                for token_elem in layer_elem:
+                    self.tokens[token_elem.get('ID')] = Token(token_elem.text)
+            elif tag == 'sentences':
+                self.sentences = Sentences()
+                for sentence_elem in layer_elem:
+                    sentence = Sentence()
+                    sentence.tokens = [self.tokens[key] for key in
+                                       sentence_elem.get('tokenIDs').split()]
+                    self.sentences[sentence_elem.get('ID')] = sentence
+            elif tag == 'lemmas':
+                for lemma_elem in layer_elem:
+                    for token_id in lemma_elem.get('tokenIDs').split():
+                        self.tokens[token_id].lemma = lemma_elem.text
+            elif tag == 'POStags':
+                self.tokens.pos_tagset = layer_elem.get('tagset')
+                for tag_elem in layer_elem:
+                    for token_id in tag_elem.get('tokenIDs').split():
+                        self.tokens[token_id].tag = tag_elem.text
+            elif tag == 'textstructure':
+                self.textstructure = TextStructure()
+                for span_elem in layer_elem:
+                    if not 'start' in span_elem.attrib:
+                        # The TCF example contains textspans with no start or end
+                        # attribute. The meaning of those is unclear, we skip them
+                        # here.
+                        continue
+                    span = TextSpan()
+                    if 'type' in span_elem.attrib:
+                        span.type = span_elem.get('type')
+                    span.tokens = []
+                    start = span_elem.get('start')
+                    end = span_elem.get('end')
+                    keys = list(self.tokens.keys())
+                    for key in keys[keys.index(start):]:
+                        span.tokens.append(self.tokens.get(key))
+                        if key == end:
+                            break
+                    self.textstructure.append(span)
+        # Reset new_layers
+        self.new_layers = []
+
+    def __setattr__(self, name, value):
+        if isinstance(value, AnnotationLayerBase):
+            self.new_layers.append(name)
+        super().__setattr__(name, value)
+
+    @property
+    def xml(self):
+        corpus_elem = self.tree.xpath('/data:D-Spin/text:TextCorpus',
+                                      namespaces=NS)[0]
+        for layer in self.new_layers:
+            corpus_elem.append(getattr(self, layer).tcf)
+        self.new_layers = []
+        return etree.tostring(self.tree, encoding='utf8',
+                              pretty_print=True, xml_declaration=True)
 
     def find_token(self, token_id):
         warn('TextCorpus.find_token() is deprecated. '
@@ -154,6 +213,12 @@ class Token(AnnotationElement):
 
     def __str__(self):
         return self.text
+
+    @property
+    def tcf(self):
+        element = super().tcf
+        element.text = self.text
+        return element
 
     @property
     def postag(self):
@@ -192,6 +257,12 @@ class Sentence(AnnotationElement):
     element = 'sentence'
     prefix = 's'
 
+    @property
+    def tcf(self):
+        element = super().tcf
+        element.set('tokenIDs', ' '.join([token.id for token in self.tokens]))
+        return element
+
 
 class TextStructure(AnnotationLayer):
 
@@ -203,64 +274,12 @@ class TextSpan(AnnotationElement):
     element = 'textspan'
     prefix = 'ts'
 
-    def __init__(self):
+    def __init__(self, type=None):
         super().__init__()
-        self.type = None
+        self.type = type
 
-
-def parse(input_data, layers=None):
-    parser = etree.XMLParser(remove_blank_text=True)
-    root = etree.fromstring(input_data, parser=parser)
-    tree = etree.ElementTree(root)
-    corpus_elem = tree.xpath('/data:D-Spin/text:TextCorpus',
-                                namespaces=NS)[0]
-    corpus = TextCorpus(lang=corpus_elem.get('lang'))
-    if layers:
-        layer_elems = [corpus_elem.find(P_TEXT + layer) for layer in layers]
-    else:
-        layer_elems = corpus_elem
-    for layer_elem in layer_elems:
-        tag = etree.QName(layer_elem).localname
-        if tag == 'text':
-            corpus.text = layer_elem.text
-        elif tag == 'tokens':
-            corpus.tokens = Tokens()
-            for token_elem in layer_elem:
-                corpus.tokens[token_elem.get('ID')] = Token(token_elem.text)
-        elif tag == 'sentences':
-            corpus.sentences = Sentences()
-            for sentence_elem in layer_elem:
-                sentence = Sentence()
-                sentence.tokens = [corpus.tokens[key] for key in 
-                                   sentence_elem.get('tokenIDs').split()]
-                corpus.sentences[sentence_elem.get('ID')] = sentence
-        elif tag == 'lemmas':
-            for lemma_elem in layer_elem:
-                for token_id in lemma_elem.get('tokenIDs').split():
-                    corpus.tokens[token_id].lemma = lemma_elem.text
-        elif tag == 'POStags':
-            corpus.tokens.pos_tagset = layer_elem.get('tagset')
-            for tag_elem in layer_elem:
-                for token_id in tag_elem.get('tokenIDs').split():
-                    corpus.tokens[token_id].tag = tag_elem.text
-        elif tag == 'textstructure':
-            corpus.textstructure = TextStructure()
-            for span_elem in layer_elem:
-                if not 'start' in span_elem.attrib:
-                    # The TCF example contains textspans with no start or end
-                    # attribute. The meaning of those is unclear, we skip them
-                    # here.
-                    continue
-                span = TextSpan()
-                if 'type' in span_elem.attrib:
-                    span.type = span_elem.get('type')
-                span.tokens = []
-                start = span_elem.get('start')
-                end = span_elem.get('end')
-                keys = list(corpus.tokens.keys())
-                for key in keys[keys.index(start):]:
-                    span.tokens.append(corpus.tokens.get(key))
-                    if key == end:
-                        break
-                corpus.textstructure.append(span)
-    return corpus
+    @property
+    def tcf(self):
+        element = super().tcf
+        element.set('tokenIDs', ' '.join([token.id for token in self.tokens]))
+        return element
