@@ -288,7 +288,7 @@ class Graph(AnnotationLayerBase):
 
     element = 'graph'
 
-    def __init__(self):
+    def __init__(self, *, label='lemma', weight='count'):
         try:
             self._graph = igraph.Graph()
         except NameError:
@@ -296,6 +296,8 @@ class Graph(AnnotationLayerBase):
                          'graph annotation layer.')
             raise
         self._graph.vs['name'] = ''  # Ensure 'name' attribute is present.
+        self.label = label
+        self.weight = weight
 
     @property
     def nodes(self):
@@ -312,11 +314,7 @@ class Graph(AnnotationLayerBase):
 
     def add_edge(self, source, target, weight=1, **attr):
         self._graph.add_edge(source, target, weight=weight, **attr)
-        try:
-            return self.edge(source, target)
-        except:
-            print(source, target)
-            raise
+        return self.edge(source, target)
 
     def node(self, name):
         if isinstance(name, igraph.Vertex):
@@ -330,7 +328,30 @@ class Graph(AnnotationLayerBase):
     def edge(self, source, target):
         source = self.node(source)
         target = self.node(target)
-        return self._graph.es.find(_within=(source.index, target.index))
+        try:
+            return self._graph.es.find(_within=(source.index, target.index))
+        except ValueError:
+            return None
+
+    def node_for_token(self, token):
+        name = getattr(token, self.label)
+        node = self.node(name)
+        if node is None:
+            node = self.add_node(name, tokenIDs=[token.id])
+        else:
+            if not token.id in node['tokenIDs']:
+                node['tokenIDs'].append(token.id)
+        return node
+
+    def edge_for_tokens(self, source, target):
+        names = [getattr(token, self.label)
+                 for token in (source, target)]
+        edge = self.edge(*names)
+        if edge is None:
+            edge = self.add_edge(*names, weight=1)
+        else:
+            edge['weight'] += 1
+        return edge
 
     @property
     def tcf(self):
