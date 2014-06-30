@@ -97,6 +97,9 @@ class ExportingWorker(Worker):
         self.corpus = tcf.TextCorpus(input_data, layers=self.layers)
         return self.export()
 
+    def export(self):
+        raise NotImplementedError
+
 
 class RemoteWorker(Worker):
     """
