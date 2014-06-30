@@ -49,6 +49,9 @@ class AnnotationLayerBase:
 
     element = ''
 
+    def __init__(self, initialdata=None):
+        self.corpus = None
+
     @property
     def tcf(self):
         elem = etree.Element(P_TEXT + self.element)
@@ -58,11 +61,15 @@ class AnnotationLayerBase:
 
 
 class AnnotationLayer(AnnotationLayerBase, UserList):
-    pass
+
+    def __init__(self, initialdata=None):
+        AnnotationLayerBase.__init__(self)
+        UserList.__init__(self, initialdata)
 
 class AnnotationLayerWithIDs(AnnotationLayerBase, UserDict):
 
     def __init__(self, initialdata=None):
+        AnnotationLayerBase.__init__(self)
         self.data = OrderedDict()
         if initialdata:
             self.data.update(initialdata)
@@ -111,9 +118,20 @@ class TextCorpus:
 
     """
 
-    def __init__(self, input_data, *, layers=None):
+    def __init__(self, input_data=None, *, layers=None):
         self.new_layers = []
         # Parse input data.
+        if not input_data:
+            input_data = """
+            <D-Spin xmlns="http://www.dspin.de/data" version="0.4">
+              <MetaData xmlns="http://www.dspin.de/data/metadata">
+                <source/>
+                <Services/>
+              </MetaData>
+              <TextCorpus xmlns="http://www.dspin.de/data/textcorpus" lang="de">
+              </TextCorpus>
+            </D-Spin>
+            """
         parser = etree.XMLParser(remove_blank_text=True)
         root = etree.fromstring(input_data, parser=parser)
         self.tree = etree.ElementTree(root)
@@ -127,7 +145,7 @@ class TextCorpus:
         for layer_elem in layer_elems:
             tag = etree.QName(layer_elem).localname
             if tag == 'text':
-                self.text = layer_elem.text
+                self.text = Text(layer_elem.text)
             elif tag == 'tokens':
                 self.tokens = Tokens()
                 for token_elem in layer_elem:
@@ -144,7 +162,7 @@ class TextCorpus:
                     for token_id in lemma_elem.get('tokenIDs').split():
                         self.tokens[token_id].lemma = lemma_elem.text
             elif tag == 'POStags':
-                self.tokens.pos_tagset = layer_elem.get('tagset')
+                self.postags = POStags(layer_elem.get('tagset'))
                 for tag_elem in layer_elem:
                     for token_id in tag_elem.get('tokenIDs').split():
                         self.tokens[token_id].tag = tag_elem.text
@@ -174,6 +192,7 @@ class TextCorpus:
     def __setattr__(self, name, value):
         if isinstance(value, AnnotationLayerBase):
             self.new_layers.append(name)
+            value.corpus = self
         super().__setattr__(name, value)
 
     @property
@@ -192,12 +211,22 @@ class TextCorpus:
         return self.tokens.get(token_id)
 
 
+class Text(AnnotationLayerBase):
+    element = 'text'
+
+    def __init__(self, text):
+        self.text = text
+
+    @property
+    def tcf(self):
+        element = etree.Element(P_TEXT + 'text')
+        element.text = self.text
+        return element
+
+
 class Tokens(AnnotationLayerWithIDs):
     element = 'tokens'
 
-    def __init__(self, initialdata=None):
-        super().__init__(initialdata)
-        self.pos_tagset = None
 
 class Token(AnnotationElement):
     """
@@ -228,7 +257,7 @@ class Token(AnnotationElement):
     @property
     def postag(self):
         """POS tag from a TagSet."""
-        tagset = TagSet(self.parent.pos_tagset)
+        tagset = TagSet(self.parent.corpus.postags.tagset)
         return tagset[self.tag]
 
     @property
@@ -247,6 +276,39 @@ class Token(AnnotationElement):
 class Sentences(AnnotationLayerWithIDs):
 
     element = 'sentences'
+
+
+class Lemmas(AnnotationLayer):
+
+    element = 'lemmas'
+
+    @property
+    def tcf(self):
+        element = etree.Element(P_TEXT + self.element)
+        for i, token in enumerate(self.corpus.tokens):
+            child = etree.SubElement(element, P_TEXT + 'lemma',
+                                     ID='le_{}'.format(i),
+                                     tokenIDs=token.id)
+            child.text = token.lemma
+        return element
+
+
+class POStags(AnnotationLayer):
+
+    element = 'POStags'
+
+    def __init__(self, tagset):
+        self.tagset = tagset
+
+    @property
+    def tcf(self):
+        element = etree.Element(P_TEXT + self.element, tagset=self.tagset)
+        for i, token in enumerate(self.corpus.tokens):
+            child = etree.SubElement(element, P_TEXT + 'tag',
+                                     ID='pt_{}'.format(i),
+                                     tokenIDs=token.id)
+            child.text = token.tag
+        return element
 
 
 class Sentence(AnnotationElement):
@@ -281,14 +343,18 @@ class TextSpan(AnnotationElement):
     @property
     def tcf(self):
         element = super().tcf
-        element.set('tokenIDs', ' '.join([token.id for token in self.tokens]))
+        if self.tokens:
+            element.set('start', self.tokens[0].id)
+            element.set('end', self.tokens[-1].id)
+        if self.type:
+            element.set('type', self.type)
         return element
 
 class Graph(AnnotationLayerBase):
 
     element = 'graph'
 
-    def __init__(self, *, label='lemma', weight='count'):
+    def __init__(self, *, label='lemma', weight='count', type='postag'):
         try:
             self._graph = igraph.Graph()
         except NameError:
@@ -298,6 +364,7 @@ class Graph(AnnotationLayerBase):
         self._graph.vs['name'] = ''  # Ensure 'name' attribute is present.
         self.label = label
         self.weight = weight
+        self.type = type
 
     @property
     def nodes(self):
@@ -338,6 +405,8 @@ class Graph(AnnotationLayerBase):
         node = self.node(name)
         if node is None:
             node = self.add_node(name, tokenIDs=[token.id])
+            if self.type == 'postag':
+                node['type'] = token.postag.find_top().name
         else:
             if not token.id in node['tokenIDs']:
                 node['tokenIDs'].append(token.id)
@@ -376,7 +445,7 @@ class Graph(AnnotationLayerBase):
                 else:
                     node.set(key, str(value))
         for link in self._graph.es:
-            edge = etree.SubElement(edges, P_TEXT + 'edges',
+            edge = etree.SubElement(edges, P_TEXT + 'edge',
                                     source=nid.format(link.source),
                                     target=nid.format(link.target))
             for key, value in link.attributes().items():
