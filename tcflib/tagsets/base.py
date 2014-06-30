@@ -115,6 +115,13 @@ class ISOcatTag(TagBase, etree.ElementBase):
             super_tag = super_tag.find_super()
         return supers
 
+    def find_top(self):
+        supers = self.find_all_super()
+        if supers:
+            return supers[-1]
+        else:
+            return self
+
 
 class ISOcatTagSet(TagSetBase):
     """
