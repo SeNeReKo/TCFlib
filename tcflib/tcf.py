@@ -366,13 +366,34 @@ class Graph(AnnotationLayerBase):
         self.weight = weight
         self.type = type
 
+        class Edge:
+            def __init__(self, edge, graph):
+                self._edge = edge
+                self._graph = graph
+
+            def __getitem__(self, key):
+                return self._edge[key]
+
+            def __setitem__(self, key, value):
+                self._edge[key] = value
+
+            @property
+            def source(self):
+                return self._graph.vs[self._edge.source]
+
+            @property
+            def target(self):
+                return self._graph.vs[self._edge.target]
+
+        self._edge_cls = Edge
+
     @property
     def nodes(self):
         return self._graph.vs
 
     @property
     def edges(self):
-        return self._graph.es
+        return [self._edge_cls(edge, self._graph) for edge in self._graph.es]
 
     def add_node(self, name, **attr):
         if not name in self._graph.vs['name']:
@@ -396,7 +417,8 @@ class Graph(AnnotationLayerBase):
         source = self.node(source)
         target = self.node(target)
         try:
-            return self._graph.es.find(_within=(source.index, target.index))
+            edge = self._graph.es.find(_within=(source.index, target.index))
+            return self._edge_cls(edge, self._graph)
         except ValueError:
             return None
 
