@@ -73,7 +73,7 @@ class NltkTokenizer(AddingWorker):
         self.corpus.sentences = Sentences()
         self.corpus.textstructure = TextStructure()
         # Parse text
-        text = self.corpus.text
+        text = self.corpus.text.text
         paragraphs = listsplit(text.splitlines(), '')
         paragraphs = ['\n'.join(lines) for lines in paragraphs]
         for paragraph in paragraphs:
