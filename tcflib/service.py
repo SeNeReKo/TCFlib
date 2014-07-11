@@ -60,6 +60,12 @@ class Worker(object):
     def __ror__(self, input_data):
         return self.run(input_data)
 
+    def setup(self, input_data):
+        if isinstance(input_data, tcf.TextCorpus):
+            self.corpus = input_data
+        else:
+            self.corpus = tcf.TextCorpus(input_data, layers=self.layers)
+
     def run(self, input_data):
         pass
 
@@ -71,9 +77,9 @@ class AddingWorker(Worker):
     """
 
     def run(self, input_data):
-        self.corpus = tcf.TextCorpus(input_data, layers=self.layers)
+        self.setup(input_data)
         self.add_annotations()
-        return self.corpus.xml
+        return self.corpus
 
     def add_annotations(self):
         pass
@@ -84,7 +90,15 @@ class ImportingWorker(Worker):
     An `ImportingWorker` converts input data to TCF.
 
     """
-    pass
+    def setup(self, input_data):
+        self.input_data = input_data
+
+    def run(self, input_data):
+        self.setup(input_data)
+        return self.import_()
+
+    def import_(self):
+        pass
 
 
 class ExportingWorker(Worker):
@@ -94,7 +108,7 @@ class ExportingWorker(Worker):
     """
 
     def run(self, input_data):
-        self.corpus = tcf.TextCorpus(input_data, layers=self.layers)
+        self.setup(input_data)
         return self.export()
 
     def export(self):
@@ -116,6 +130,8 @@ class RemoteWorker(Worker):
         super().__init__(**options)
 
     def run(self, input_data):
+        if isinstance(input_data, tcf.TextCorpus):
+            input_data = input_data.xml
         response = requests.post(self.url, params=vars(self.options),
                                  data=input_data)
         return response.content
@@ -128,6 +144,8 @@ class Write(object):
 
     def __ror__(self, input_data):
         if input_data:
+            if isinstance(input_data, tcf.TextCorpus):
+                input_data = input_data.xml
             with open(self.filename, 'wb') as outfile:
                 outfile.write(input_data)
 
@@ -187,6 +205,8 @@ def run_as_cli(worker_class):
         input_data = args.infile.read()
         worker = worker_class(**worker_args)
         output = worker.run(input_data)
+        if hasattr(output, 'xml'):
+            output = output.xml
         if output:
             args.outfile.write(output)
 
@@ -198,5 +218,8 @@ def run_as_service(worker_class, port):
     def annotate():
         logging.debug('Got HTTP request.')
         worker = worker_class(**request.query)
-        return worker.run(request.body.read())
+        output = worker.run(request.body.read())
+        if hasattr(output, 'xml'):
+            output = output.xml
+        return output
     run(host='localhost', port=port)
