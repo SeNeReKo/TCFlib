@@ -28,6 +28,7 @@ This module provides an API for TCF documents.
 
 from collections import UserList, UserDict, OrderedDict
 from warnings import warn
+import logging
 
 from lxml import etree
 try:
@@ -122,6 +123,7 @@ class TextCorpus:
         self.new_layers = []
         # Parse input data.
         if not input_data:
+            logging.debug('Creating new TextCorpus.')
             input_data = """
             <D-Spin xmlns="http://www.dspin.de/data" version="0.4">
               <MetaData xmlns="http://www.dspin.de/data/metadata">
@@ -133,8 +135,9 @@ class TextCorpus:
             </D-Spin>
             """
         parser = etree.XMLParser(remove_blank_text=True)
+        logging.debug('Parsing input data.')
         root = etree.fromstring(input_data, parser=parser)
-        self.tree = etree.ElementTree(root)
+        self._tree = etree.ElementTree(root)
         corpus_elem = self.tree.xpath('/data:D-Spin/text:TextCorpus',
                                       namespaces=NS)[0]
         self.lang = corpus_elem.get('lang')
@@ -145,12 +148,15 @@ class TextCorpus:
         for layer_elem in layer_elems:
             tag = etree.QName(layer_elem).localname
             if tag == 'text':
+                logging.debug('Reading layer "{}".'.format(tag))
                 self.text = Text(layer_elem.text)
             elif tag == 'tokens':
+                logging.debug('Reading layer "{}".'.format(tag))
                 self.tokens = Tokens()
                 for token_elem in layer_elem:
                     self.tokens[token_elem.get('ID')] = Token(token_elem.text)
             elif tag == 'sentences':
+                logging.debug('Reading layer "{}".'.format(tag))
                 self.sentences = Sentences()
                 for sentence_elem in layer_elem:
                     sentence = Sentence()
@@ -158,15 +164,18 @@ class TextCorpus:
                                        sentence_elem.get('tokenIDs').split()]
                     self.sentences[sentence_elem.get('ID')] = sentence
             elif tag == 'lemmas':
+                logging.debug('Reading layer "{}".'.format(tag))
                 for lemma_elem in layer_elem:
                     for token_id in lemma_elem.get('tokenIDs').split():
                         self.tokens[token_id].lemma = lemma_elem.text
             elif tag == 'POStags':
+                logging.debug('Reading layer "{}".'.format(tag))
                 self.postags = POStags(layer_elem.get('tagset'))
                 for tag_elem in layer_elem:
                     for token_id in tag_elem.get('tokenIDs').split():
                         self.tokens[token_id].tag = tag_elem.text
             elif tag == 'textstructure':
+                logging.debug('Reading layer "{}".'.format(tag))
                 self.textstructure = TextStructure()
                 for span_elem in layer_elem:
                     if not 'start' in span_elem.attrib:
@@ -196,12 +205,16 @@ class TextCorpus:
         super().__setattr__(name, value)
 
     @property
-    def xml(self):
-        corpus_elem = self.tree.xpath('/data:D-Spin/text:TextCorpus',
+    def tree(self):
+        corpus_elem = self._tree.xpath('/data:D-Spin/text:TextCorpus',
                                       namespaces=NS)[0]
         for layer in self.new_layers:
             corpus_elem.append(getattr(self, layer).tcf)
         self.new_layers = []
+        return self._tree
+
+    @property
+    def xml(self):
         return etree.tostring(self.tree, encoding='utf8',
                               pretty_print=True, xml_declaration=True)
 
