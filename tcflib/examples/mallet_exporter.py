@@ -27,6 +27,7 @@ A service that converts TCF to the Mallet input format.
 """
 
 from collections import Counter
+import re
 
 from lxml import etree
 from tcflib import tcf
@@ -58,6 +59,7 @@ class MalletExporter(ExportingWorker):
     __options__ = {
         'spantype': '',
         'postags': [''],
+        'prefix': ''
     }
     layers = ['tokens', 'POStags', 'lemmas', 'textstructure']
 
@@ -76,14 +78,21 @@ class MalletExporter(ExportingWorker):
                          if span.type == self.options.spantype]
         else:
             textspans = self.corpus.textstructure
+        # Ensure prefix does not contain whitespace
+        prefix = re.sub(r'\s+', '_', self.options.prefix)
         # Do the actual work. This mallet output uses lemma as token value.
         output = []
         for i, span in enumerate(textspans, start=1):
+            # Filter tokens by POS and use lemmata
             words = [token.lemma for token in span.tokens
                      if tokenfilter(token)]
-            output.append('{} {} {}\n'.format(i, self.corpus.lang,
-                                              ' '.join(words)))
-        # ReplacingWorker returns output as raw data.
+            # Deal with TreeTagger’s `<unknown>` pseudo-lemma
+            words = [word for word in words if not word == '<unknown>']
+            # Append a line in mallet’s `<document> <label> <words...>` format
+            output.append('{}{} {} {}\n'.format(prefix, i,
+                                                self.corpus.lang,
+                                                ' '.join(words)))
+        # ExportingWorker returns output as bytes.
         return ''.join(output).encode('utf8')
 
 
