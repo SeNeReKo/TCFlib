@@ -192,7 +192,11 @@ class MappingTag(ISOcatTag):
 
     @property
     def name(self):
-        return self.pid2name[self.pid]
+        try:
+            return self.pid2name[self.pid]
+        except KeyError:
+            # There is no explicit mapping for the PID, return the ISOcat name.
+            return super().name
 
 
 class MappingTagSet(ISOcatTagSet):
