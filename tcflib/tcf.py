@@ -213,11 +213,6 @@ class TextCorpus:
         self.new_layers = []
         return self._tree
 
-    @property
-    def xml(self):
-        return etree.tostring(self.tree, encoding='utf8',
-                              pretty_print=True, xml_declaration=True)
-
     def find_token(self, token_id):
         warn('TextCorpus.find_token() is deprecated. '
              'Use TextCorpus.tokens.get() instead.')
@@ -491,3 +486,15 @@ class Graph(AnnotationLayerBase):
                 else:
                     edge.set(key, str(value))
         return graph
+
+def serialize(obj):
+    if isinstance(obj, TextCorpus):
+        obj = obj.tree
+    if hasattr(obj, 'xpath'):
+        return etree.tostring(obj, encoding='utf8',
+                              pretty_print=True, xml_declaration=True)
+    try:
+        # Duck-type string
+        return obj.encode('utf8')
+    except AttributeError:
+        return obj

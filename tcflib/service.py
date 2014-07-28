@@ -130,8 +130,7 @@ class RemoteWorker(Worker):
         super().__init__(**options)
 
     def run(self, input_data):
-        if isinstance(input_data, tcf.TextCorpus):
-            input_data = input_data.xml
+        input_data = tcf.serialize(input_data)
         response = requests.post(self.url, params=vars(self.options),
                                  data=input_data)
         return response.content
@@ -144,8 +143,7 @@ class Write(object):
 
     def __ror__(self, input_data):
         if input_data:
-            if isinstance(input_data, tcf.TextCorpus):
-                input_data = input_data.xml
+            input_data = tcf.serialize(input_data)
             with open(self.filename, 'wb') as outfile:
                 outfile.write(input_data)
 
@@ -205,8 +203,7 @@ def run_as_cli(worker_class):
         input_data = args.infile.read()
         worker = worker_class(**worker_args)
         output = worker.run(input_data)
-        if hasattr(output, 'xml'):
-            output = output.xml
+        output = tcf.serialize(output)
         if output:
             args.outfile.write(output)
 
@@ -219,7 +216,6 @@ def run_as_service(worker_class, port):
         logging.debug('Got HTTP request.')
         worker = worker_class(**request.query)
         output = worker.run(request.body.read())
-        if hasattr(output, 'xml'):
-            output = output.xml
+        output = tcf.serialize(output)
         return output
     run(host='localhost', port=port)
