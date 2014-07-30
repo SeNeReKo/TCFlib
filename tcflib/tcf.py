@@ -98,16 +98,22 @@ class AnnotationElement:
     element = ''
     prefix = 'x'
 
-    def __init__(self):
+    def __init__(self, *, tokens=None):
         self.parent = None
         self.id = None
-        self.tokens = []
+        if not tokens:
+            self.tokens = []
+        else:
+            self.tokens = tokens
 
     @property
     def tcf(self):
         element = etree.Element(P_TEXT + self.element)
         if self.id is not None:
             element.set('ID', self.id)
+        if self.tokens:
+            element.set('tokenIDs',
+                        ' '.join([token.id for token in self.tokens]))
         return element
 
 
@@ -130,8 +136,7 @@ class TextCorpus:
                 <source/>
                 <Services/>
               </MetaData>
-              <TextCorpus xmlns="http://www.dspin.de/data/textcorpus" lang="de">
-              </TextCorpus>
+              <TextCorpus xmlns="http://www.dspin.de/data/textcorpus" lang="de"/>
             </D-Spin>
             """
         parser = etree.XMLParser(remove_blank_text=True)
@@ -277,13 +282,10 @@ class Token(AnnotationElement):
         semantic unit.
 
         """
-        # TODO: Add named entity and reference support
+        # TODO: Add reference support
+        if self.entity:
+            return ' '.join([t.lemma or t.text for t in self.entity.tokens])
         return self.lemma or self.text
-
-
-class Sentences(AnnotationLayerWithIDs):
-
-    element = 'sentences'
 
 
 class Lemmas(AnnotationLayer):
@@ -318,6 +320,59 @@ class POStags(AnnotationLayer):
             child.text = token.tag
         return element
 
+class NamedEntities(AnnotationLayerWithIDs):
+
+    element = 'NamedEntities'
+
+    def __init__(self, type):
+        super().__init__()
+        self.type = type
+
+    @property
+    def tcf(self):
+        element = super().tcf
+        element.set('type', self.type)
+        return element
+
+
+class Entity(AnnotationElement):
+
+    element = 'Entity'
+    prefix = 'ne'
+
+    def __init__(self, class_=None, tokens=None):
+        self.parent = None
+        self.id = None
+        self.class_ = class_
+        self._tokens = []
+        if tokens:
+            self.tokens = tokens
+
+    @property
+    def tokens(self):
+        return self._tokens
+
+    @tokens.setter
+    def tokens(self, tokens):
+        # This makes sure tokens contain a link to the entity.
+        # TODO: This does not work for usecases like `e.tokens.append(token)`.
+        # We would need a list-like proxy class for that which handles this.
+        self._tokens = tokens
+        for token in tokens:
+            token.entity = self
+
+    @property
+    def tcf(self):
+        element = super().tcf
+        if self.class_ is not None:
+            element.set('class', self.class_)
+        return element
+
+
+class Sentences(AnnotationLayerWithIDs):
+
+    element = 'sentences'
+
 
 class Sentence(AnnotationElement):
     """
@@ -326,12 +381,6 @@ class Sentence(AnnotationElement):
     """
     element = 'sentence'
     prefix = 's'
-
-    @property
-    def tcf(self):
-        element = super().tcf
-        element.set('tokenIDs', ' '.join([token.id for token in self.tokens]))
-        return element
 
 
 class TextStructure(AnnotationLayer):
@@ -351,6 +400,9 @@ class TextSpan(AnnotationElement):
     @property
     def tcf(self):
         element = super().tcf
+        if 'tokenIDs' in element.attrib:
+            # Tokens are handled in a different way here.
+            del element.attrib['tokenIDs']
         if self.tokens:
             element.set('start', self.tokens[0].id)
             element.set('end', self.tokens[-1].id)
