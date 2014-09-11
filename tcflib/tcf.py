@@ -67,6 +67,7 @@ class AnnotationLayer(AnnotationLayerBase, UserList):
         AnnotationLayerBase.__init__(self)
         UserList.__init__(self, initialdata)
 
+
 class AnnotationLayerWithIDs(AnnotationLayerBase, UserDict):
 
     def __init__(self, initialdata=None):
@@ -200,6 +201,13 @@ class TextCorpus:
                         if key == end:
                             break
                     self.textstructure.append(span)
+            elif tag == 'wsd':
+                logging.debug('Reading layer "{}".'.format(tag))
+                self.wsd = Wsd(layer_elem.get('src'))
+                for ws_elem in layer_elem:
+                    for token_id in ws_elem.get('tokenIDs').split():
+                        senses = ws_elem.get('lexunits').split()
+                        self.tokens[token_id].wordsenses = senses
         # Reset new_layers
         self.new_layers = []
 
@@ -257,6 +265,7 @@ class Token(AnnotationElement):
         self.analysis = None
         self.entity = None
         self.reference = None
+        self.wordsenses = []
 
     def __str__(self):
         return self.text
@@ -303,6 +312,24 @@ class Lemmas(AnnotationLayer):
         return element
 
 
+class Wsd(AnnotationLayer):
+
+    element = 'wsd'
+
+    def __init__(self, source):
+        self.source = source
+
+    @property
+    def tcf(self):
+        element = etree.Element(P_TEXT + self.element, src=self.source)
+        for token in self.corpus.tokens:
+            if token.wordsenses:
+                child = etree.SubElement(element, P_TEXT + 'ws',
+                                         tokenIDs=token.id,
+                                         lexunits=' '.join(token.wordsenses))
+        return element
+
+
 class POStags(AnnotationLayer):
 
     element = 'POStags'
@@ -319,6 +346,7 @@ class POStags(AnnotationLayer):
                                      tokenIDs=token.id)
             child.text = token.tag
         return element
+
 
 class NamedEntities(AnnotationLayerWithIDs):
 
@@ -409,6 +437,7 @@ class TextSpan(AnnotationElement):
         if self.type:
             element.set('type', self.type)
         return element
+
 
 class Graph(AnnotationLayerBase):
 
