@@ -52,6 +52,7 @@ class AnnotationLayerBase:
 
     def __init__(self, initialdata=None):
         self.corpus = None
+        self.parent = None
 
     @property
     def tcf(self):
@@ -66,6 +67,10 @@ class AnnotationLayer(AnnotationLayerBase, UserList):
     def __init__(self, initialdata=None):
         AnnotationLayerBase.__init__(self)
         UserList.__init__(self, initialdata)
+
+    def append(self, item):
+        item.parent = self
+        self.data.append(item)
 
 
 class AnnotationLayerWithIDs(AnnotationLayerBase, UserDict):
@@ -87,11 +92,14 @@ class AnnotationLayerWithIDs(AnnotationLayerBase, UserDict):
     def keys(self):
         return self.data.keys()
 
-    def append(self, item):
-        key = '{}_{}'.format(item.prefix, len(self.data))
+    def append(self, item, n=None):
         item.parent = self
-        item.id = key
-        self.data[key] = item
+        if not item.id:
+            if n is None:
+                n = len(self.data)
+            key = '{}_{}'.format(item.prefix, n)
+            item.id = key
+        self.data[item.id] = item
 
 
 class AnnotationElement:
@@ -180,6 +188,42 @@ class TextCorpus:
                 for tag_elem in layer_elem:
                     for token_id in tag_elem.get('tokenIDs').split():
                         self.tokens[token_id].tag = tag_elem.text
+            elif tag == 'namedEntities':
+                logging.debug('Reading layer "{}".'.format(tag))
+                self.namedentities = NamedEntities(layer_elem.get('type'))
+                for entity_elem in layer_elem:
+                    entity = NamedEntity(class_=entity_elem.get('class'))
+                    entity.tokens = [self.tokens[tid]
+                                     for tid
+                                     in entity_elem.get('tokenIDs').split()]
+                    self.namedentities.append(entity)
+            elif tag == 'references':
+                logging.debug('Reading layer "{}".'.format(tag))
+                self.references = References(
+                        typetagset=layer_elem.get('typetagset'),
+                        reltagset=layer_elem.get('reltagset'),
+                        extrefs=layer_elem.get('extrefs'))
+                for entity_elem in layer_elem:
+                    entity = Entity()
+                    # Collect references, as referenced References may not
+                    # exists yet.
+                    targets = {}
+                    extref_elem = entity_elem.find(P_TEXT + 'extref')
+                    if extref_elem is not None:
+                        entity.extref = extref.get('refid')
+                    for ref_elem in entity_elem.findall(P_TEXT + 'reference'):
+                        reference = Reference()
+                        reference.id = ref_elem.get('ID')
+                        for token_id in ref_elem.get('tokenIDs').split():
+                            token = self.tokens[token_id]
+                            token.reference = reference
+                            reference.tokens.append(token)
+                        if 'target' in ref_elem.attrib:
+                            targets[reference.id] = ref_elem.get('target')
+                        entity.append(reference)
+                    for source, target in targets.items():
+                        entity[source].target = entity[target]
+                    self.references.append(entity)
             elif tag == 'textstructure':
                 logging.debug('Reading layer "{}".'.format(tag))
                 self.textstructure = TextStructure()
@@ -350,7 +394,7 @@ class POStags(AnnotationLayer):
 
 class NamedEntities(AnnotationLayerWithIDs):
 
-    element = 'NamedEntities'
+    element = 'namedEntities'
 
     def __init__(self, type):
         super().__init__()
@@ -363,9 +407,9 @@ class NamedEntities(AnnotationLayerWithIDs):
         return element
 
 
-class Entity(AnnotationElement):
+class NamedEntity(AnnotationElement):
 
-    element = 'Entity'
+    element = 'entity'
     prefix = 'ne'
 
     def __init__(self, class_=None, tokens=None):
@@ -394,6 +438,94 @@ class Entity(AnnotationElement):
         element = super().tcf
         if self.class_ is not None:
             element.set('class', self.class_)
+        return element
+
+
+class References(AnnotationLayer):
+
+    element = 'references'
+
+    def __init__(self, typetagset, reltagset, extrefs):
+        super().__init__()
+        self.typetagset = typetagset
+        self.reltagset = reltagset
+        self.extrefs = extrefs
+
+    @property
+    def tcf(self):
+        element = super().tcf
+        for key in ('typetagset', 'reltagset', 'extrefs'):
+            value = getattr(self, key)
+            if value is not None:
+                element.set(key, value)
+        return element
+
+
+class Entity(AnnotationLayerWithIDs):
+
+    element = 'entity'
+
+    def __init__(self):
+        super().__init__()
+        self.extref = None
+
+    @property
+    def tcf(self):
+        element = super().tcf
+        if self.extref is not None:
+            er_elem = etree.Element('extref', refid=self.extref)
+            element.insert(0, er_elem)
+        return element
+
+    def append(self, item):
+        if item.id is not None:
+            n = None
+        else:
+            n = sum([len(e.data) for e in self.parent])
+        super().append(item, n)
+
+
+class Reference(AnnotationElement):
+
+    element = 'reference'
+    prefix = 'rc'
+
+    def __init__(self, *, type=None, rel=None, target=None, tokens=None):
+        super().__init__()
+        self.type = type
+        self.rel = rel
+        self.target = target
+        self._tokens = []
+        if tokens:
+            self.tokens = tokens
+
+    @property
+    def tokens(self):
+        return self._tokens
+
+    @tokens.setter
+    def tokens(self, tokens):
+        # This makes sure tokens contain a link to the entity.
+        # TODO: This does not work for usecases like `e.tokens.append(token)`.
+        # We would need a list-like proxy class for that which handles this.
+        self._tokens = tokens
+        for token in tokens:
+            token.reference = self
+
+
+    @property
+    def entity(self):
+        return self.parent
+
+    @property
+    def tcf(self):
+        element = super().tcf
+        for key in ('type', 'rel'):
+            value = getattr(self, key)
+            if value is not None:
+                element.set(key, value)
+        if self.target is not None:
+            element.set('target', self.target.id)
         return element
 
 
