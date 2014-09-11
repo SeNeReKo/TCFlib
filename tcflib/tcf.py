@@ -414,7 +414,7 @@ class Graph(AnnotationLayerBase):
 
     element = 'graph'
 
-    def __init__(self, *, label='lemma', weight='count', type='postag'):
+    def __init__(self, *, label='lemma', weight='count'):
         try:
             self._graph = igraph.Graph()
         except NameError:
@@ -424,7 +424,6 @@ class Graph(AnnotationLayerBase):
         self._graph.vs['name'] = ''  # Ensure 'name' attribute is present.
         self.label = label
         self.weight = weight
-        self.type = type
 
         class Edge:
             def __init__(self, edge, graph):
@@ -487,8 +486,10 @@ class Graph(AnnotationLayerBase):
         node = self.node(name)
         if node is None:
             node = self.add_node(name, tokenIDs=[token.id])
-            if self.type == 'postag':
+            if token.postag:
                 node['type'] = token.postag.find_top().name
+            if token.entity:
+                    node['class'] = token.entity.class_ or ''
         else:
             if not token.id in node['tokenIDs']:
                 node['tokenIDs'].append(token.id)
