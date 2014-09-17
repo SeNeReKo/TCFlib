@@ -335,10 +335,22 @@ class Token(AnnotationElement):
         semantic unit.
 
         """
-        # TODO: Add reference support
-        if self.entity:
-            return ' '.join([t.lemma or t.text for t in self.entity.tokens])
-        return self.lemma or self.text
+        def disambiguate(token):
+            if token.wordsenses:
+                return '{} ({})'.format(token.lemma or token.text,
+                                        ', '.join(token.wordsenses))
+            return token.lemma or token.text
+        tokens = None
+        if self.reference:
+            if self.reference.entity.extref:
+                return self.reference.entity.extref
+            if self.reference.target:
+                tokens = self.reference.target.tokens
+        elif self.entity:
+            tokens = self.entity.tokens
+        if tokens:
+            return ' '.join([disambiguate(token) for token in tokens])
+        return disambiguate(self)
 
 
 class Lemmas(AnnotationLayer):
