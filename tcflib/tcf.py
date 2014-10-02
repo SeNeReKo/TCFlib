@@ -185,15 +185,15 @@ class TextCorpus:
             tag = etree.QName(layer_elem).localname
             if tag == 'text':
                 logging.debug('Reading layer "{}".'.format(tag))
-                self.text = Text(layer_elem.text)
+                self.add_layer(Text(layer_elem.text))
             elif tag == 'tokens':
                 logging.debug('Reading layer "{}".'.format(tag))
-                self.tokens = Tokens()
+                self.add_layer(Tokens())
                 for token_elem in layer_elem:
                     self.tokens[token_elem.get('ID')] = Token(token_elem.text)
             elif tag == 'sentences':
                 logging.debug('Reading layer "{}".'.format(tag))
-                self.sentences = Sentences()
+                self.add_layer(Sentences())
                 for sentence_elem in layer_elem:
                     sentence = Sentence()
                     sentence.tokens = [self.tokens[key] for key in
@@ -206,13 +206,13 @@ class TextCorpus:
                         self.tokens[token_id].lemma = lemma_elem.text
             elif tag == 'POStags':
                 logging.debug('Reading layer "{}".'.format(tag))
-                self.postags = POStags(layer_elem.get('tagset'))
+                self.add_layer(POStags(layer_elem.get('tagset')))
                 for tag_elem in layer_elem:
                     for token_id in tag_elem.get('tokenIDs').split():
                         self.tokens[token_id].tag = tag_elem.text
             elif tag == 'namedEntities':
                 logging.debug('Reading layer "{}".'.format(tag))
-                self.namedentities = NamedEntities(layer_elem.get('type'))
+                self.add_layer(NamedEntities(layer_elem.get('type')))
                 for entity_elem in layer_elem:
                     entity = NamedEntity(class_=entity_elem.get('class'))
                     entity.tokens = [self.tokens[tid]
@@ -247,7 +247,7 @@ class TextCorpus:
                     self.references.append(entity)
             elif tag == 'textstructure':
                 logging.debug('Reading layer "{}".'.format(tag))
-                self.textstructure = TextStructure()
+                self.add_layer(TextStructure())
                 for span_elem in layer_elem:
                     if not 'start' in span_elem.attrib:
                         # The TCF example contains textspans with no start or end
@@ -268,19 +268,13 @@ class TextCorpus:
                     self.textstructure.append(span)
             elif tag == 'wsd':
                 logging.debug('Reading layer "{}".'.format(tag))
-                self.wsd = Wsd(layer_elem.get('src'))
+                self.add_layer(Wsd(layer_elem.get('src')))
                 for ws_elem in layer_elem:
                     for token_id in ws_elem.get('tokenIDs').split():
                         senses = ws_elem.get('lexunits').split()
                         self.tokens[token_id].wordsenses = senses
         # Reset new_layers
         self.new_layers = []
-
-    def __setattr__(self, name, value):
-        if isinstance(value, AnnotationLayerBase):
-            self.new_layers.append(name)
-            value.corpus = self
-        super().__setattr__(name, value)
 
     @property
     def tree(self):
@@ -290,6 +284,12 @@ class TextCorpus:
             corpus_elem.append(getattr(self, layer).tcf)
         self.new_layers = []
         return self._tree
+
+    def add_layer(self, layer):
+        name = type(layer).__name__.lower()
+        setattr(self, name, layer)
+        layer.corpus = self
+        self.new_layers.append(name)
 
     def find_token(self, token_id):
         warn('TextCorpus.find_token() is deprecated. '
