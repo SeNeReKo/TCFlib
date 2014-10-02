@@ -126,6 +126,28 @@ class AnnotationElement:
         return element
 
 
+class TokenList(UserList):
+    """Proxy token list that sets token attributes.
+
+    Used for token lists of `AnnotationElement`s that maintain a relation
+    between the element and the token. E.g., appending a token to
+    `reference.tokens` should set the token’s `reference` attribute.
+    """
+
+    token_attrib = None
+    annotation_elem = None
+
+    def __init__(self, initialdata=None):
+        super().__init__(initialdata)
+        if initialdata:
+            for token in initialdata:
+                setattr(token, self.token_attrib, self.annotation_elem)
+
+    def append(self, token):
+        super().append(token)
+        setattr(token, self.token_attrib, self.annotation_elem)
+
+
 class TextCorpus:
     """
     The main class that represents a TextCorpus.
@@ -216,7 +238,6 @@ class TextCorpus:
                         reference.id = ref_elem.get('ID')
                         for token_id in ref_elem.get('tokenIDs').split():
                             token = self.tokens[token_id]
-                            token.reference = reference
                             reference.tokens.append(token)
                         if 'target' in ref_elem.attrib:
                             targets[reference.id] = ref_elem.get('target')
@@ -425,12 +446,16 @@ class NamedEntity(AnnotationElement):
     prefix = 'ne'
 
     def __init__(self, class_=None, tokens=None):
+
+        class _TokenList(TokenList):
+            token_attrib = 'entity'
+            annotation_elem = self
+        self._tokens_cls = _TokenList
+
         self.parent = None
         self.id = None
         self.class_ = class_
-        self._tokens = []
-        if tokens:
-            self.tokens = tokens
+        self._tokens = self._tokens_cls(tokens)
 
     @property
     def tokens(self):
@@ -439,11 +464,7 @@ class NamedEntity(AnnotationElement):
     @tokens.setter
     def tokens(self, tokens):
         # This makes sure tokens contain a link to the entity.
-        # TODO: This does not work for usecases like `e.tokens.append(token)`.
-        # We would need a list-like proxy class for that which handles this.
-        self._tokens = tokens
-        for token in tokens:
-            token.entity = self
+        self._tokens = self._tokens_cls(tokens)
 
     @property
     def tcf(self):
@@ -503,13 +524,17 @@ class Reference(AnnotationElement):
     prefix = 'rc'
 
     def __init__(self, *, type=None, rel=None, target=None, tokens=None):
+
+        class _TokenList(TokenList):
+            token_attrib = 'reference'
+            annotation_elem = self
+        self._tokens_cls = _TokenList
+
         super().__init__()
         self.type = type
         self.rel = rel
         self.target = target
-        self._tokens = []
-        if tokens:
-            self.tokens = tokens
+        self._tokens = self._tokens_cls(tokens)
 
     @property
     def tokens(self):
@@ -518,12 +543,7 @@ class Reference(AnnotationElement):
     @tokens.setter
     def tokens(self, tokens):
         # This makes sure tokens contain a link to the entity.
-        # TODO: This does not work for usecases like `e.tokens.append(token)`.
-        # We would need a list-like proxy class for that which handles this.
-        self._tokens = tokens
-        for token in tokens:
-            token.reference = self
-
+        self._tokens = self._tokens_cls(tokens)
 
     @property
     def entity(self):
