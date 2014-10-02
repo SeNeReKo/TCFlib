@@ -291,11 +291,6 @@ class TextCorpus:
         layer.corpus = self
         self.new_layers.append(name)
 
-    def find_token(self, token_id):
-        warn('TextCorpus.find_token() is deprecated. '
-             'Use TextCorpus.tokens.get() instead.')
-        return self.tokens.get(token_id)
-
 
 class Text(AnnotationLayerBase):
     element = 'text'
