@@ -47,6 +47,7 @@ NS = {'data': NS_DATA, 'text': NS_TEXT}
 
 
 class AnnotationLayerBase:
+    """Base class for annotation layers."""
 
     element = ''
 
@@ -56,6 +57,7 @@ class AnnotationLayerBase:
 
     @property
     def tcf(self):
+        """Return the layer as an `etree.Element`."""
         elem = etree.Element(P_TEXT + self.element)
         for child in self:
             elem.append(child.tcf)
@@ -63,6 +65,7 @@ class AnnotationLayerBase:
 
 
 class AnnotationLayer(AnnotationLayerBase, UserList):
+    """Annotation layer that acts like a list of Annotations."""
 
     def __init__(self, initialdata=None):
         AnnotationLayerBase.__init__(self)
@@ -74,6 +77,14 @@ class AnnotationLayer(AnnotationLayerBase, UserList):
 
 
 class AnnotationLayerWithIDs(AnnotationLayerBase, UserDict):
+    """Annotation layer that holds IDs of annotations.
+
+    This class acts like a hybrid of a list and a dict: It can be used like a
+    list, e.g. it has an `append` method and it iterates over its values. But
+    its items can also be set and retrieved using annotation IDs with dict-
+    like element access.
+
+    """
 
     def __init__(self, initialdata=None):
         AnnotationLayerBase.__init__(self)
@@ -103,6 +114,7 @@ class AnnotationLayerWithIDs(AnnotationLayerBase, UserDict):
 
 
 class AnnotationElement:
+    """Base class for annotation elements."""
 
     element = ''
     prefix = 'x'
@@ -117,6 +129,7 @@ class AnnotationElement:
 
     @property
     def tcf(self):
+        """Return the element as an `etree.Element`."""
         element = etree.Element(P_TEXT + self.element)
         if self.id is not None:
             element.set('ID', self.id)
@@ -157,6 +170,12 @@ class TextCorpus:
     """
 
     def __init__(self, input_data=None, *, layers=None):
+        """
+        :param input_data: The XML input.
+        :type input_data: str or None
+        :param layers: A list of layers that should be parsed.
+        :type layers: list or None
+        """
         self.new_layers = []
         # Parse input data.
         if not input_data:
@@ -278,6 +297,13 @@ class TextCorpus:
 
     @property
     def tree(self):
+        """Return the corpus as an `etree.ElementTree`.
+
+        The original XML tree is kept in memory, so that only newly added
+        layers get serialized. This makes sure that the original tree is not
+        touched.
+
+        """
         corpus_elem = self._tree.xpath('/data:D-Spin/text:TextCorpus',
                                       namespaces=NS)[0]
         for layer in self.new_layers:
@@ -286,6 +312,7 @@ class TextCorpus:
         return self._tree
 
     def add_layer(self, layer):
+        """Add an :class:`AnnotationLayerBase` object to the corpus."""
         name = type(layer).__name__.lower()
         setattr(self, name, layer)
         layer.corpus = self
@@ -562,10 +589,6 @@ class Sentences(AnnotationLayerWithIDs):
 
 
 class Sentence(AnnotationElement):
-    """
-    Class that represents a TCF sentence.
-
-    """
     element = 'sentence'
     prefix = 's'
 
@@ -729,6 +752,12 @@ class Graph(AnnotationLayerBase):
         return graph
 
 def serialize(obj):
+    """Serialize an object into a byte string.
+
+    :param obj: A :class:`TextCorpus`, `etree.ElementTree` or `string`.
+    :rtype: bytes
+
+    """
     if isinstance(obj, TextCorpus):
         obj = obj.tree
     if hasattr(obj, 'xpath'):

@@ -38,10 +38,17 @@ from tcflib import tcf
 
 class Worker(object):
     """
-    A `Worker` is responsible for running a single transformation.
+    A :class:`Worker` is responsible for running a single transformation.
+    This is the base class.
 
-    Input data are passed to a `Worker` instance during initialization. The
-    `Worker` class implements a `run` method that returns the output data.
+    Input data are passed to a :class:`Worker` instance during
+    initialization. The :class:`Worker` class implements a :meth:`run`
+    method that returns the output data.
+
+    For efficiency reasons, a worker can get either a byte string or a
+    :class:`tcf.TextCorpus` as input. This allows to pass
+    :class:`tcf.TextCorpus` objects around without serializing them. If a byte
+    string serialization is required, use :func:`tcf.serialize`.
 
     """
 
@@ -72,7 +79,7 @@ class Worker(object):
 
 class AddingWorker(Worker):
     """
-    An `AddingWorker` adds annotations to the input data.
+    An :class:`AddingWorker` adds annotations to the input data.
 
     """
 
@@ -87,7 +94,7 @@ class AddingWorker(Worker):
 
 class ImportingWorker(Worker):
     """
-    An `ImportingWorker` converts input data to TCF.
+    An :class:`ImportingWorker` converts input data to TCF.
 
     """
     def setup(self, input_data):
@@ -103,7 +110,7 @@ class ImportingWorker(Worker):
 
 class ExportingWorker(Worker):
     """
-    A `ExportingWorker` converts TCF data into other formats.
+    A :class:`ExportingWorker` converts TCF data into other formats.
 
     """
 
@@ -117,13 +124,17 @@ class ExportingWorker(Worker):
 
 class RemoteWorker(Worker):
     """
-    A `RemoteWorker` defers the actual work to a web service.
+    A :class:`RemoteWorker` defers the actual work to a web service.
 
     """
 
     url = ''
 
     def __init__(self, **options):
+        """
+        :param url: The URL of the web service that should be called.
+
+        """
         if 'url' in options:
             self.url = options['url']
             del options['url']
@@ -137,6 +148,7 @@ class RemoteWorker(Worker):
 
 
 class Write(object):
+    """A dummy worker that writes its input into a file."""
 
     def __init__(self, filename):
         self.filename = filename
@@ -149,6 +161,7 @@ class Write(object):
 
 
 def Read(filename):
+    """A dummy worker that reads input from a file."""
     with open(filename, 'rb') as infile:
         return infile.read()
 
@@ -180,6 +193,13 @@ def get_arg_parser(worker_class=None):
 
 
 def run_as_cli(worker_class):
+    """
+    Run a worker from the commandline.
+
+    In order for a worker to be called from the command line, the module
+    defining the worker should call :func:`run_as_cli` when run standalone.
+
+    """
     # Parse commandline arguments
     arg_parser = get_arg_parser(worker_class)
     args = arg_parser.parse_args()
@@ -209,6 +229,7 @@ def run_as_cli(worker_class):
 
 
 def run_as_service(worker_class, port):
+    """Run a worker as a web service."""
     from bottle import request, route, run
 
     @route('/annotate', method='POST')
