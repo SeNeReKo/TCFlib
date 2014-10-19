@@ -43,6 +43,12 @@ class TagBase(object):
         return '<Tag "{}">'.format(self.name)
 
     def is_a(self, tag):
+        """
+        Tests if the tag is the same or a child of the given tag.
+
+        :param tag: The tag to compare to.
+
+        """
         raise NotImplementedError
 
 
@@ -65,9 +71,15 @@ class TagSetBase(object):
             return tag
 
     def find_tag(self, name=None, pid=None):
+        """Finds a tag by name or PID.
+
+        Either pass `name` or `pid`, but not both.
+
+        """
         raise NotImplementedError
 
     def find_all_tags(self):
+        """Returns all tags in the tagset."""
         raise NotImplementedError
 
 
@@ -103,11 +115,13 @@ class ISOcatTag(TagBase, etree.ElementBase):
         return tag == self or tag in self.find_all_super()
 
     def find_super(self):
+        """Returns the parent tag (or None)."""
         isa = self.find(P_DCIF + 'isA')
         if isa is not None:
             return ISOcatTagSet._by_pid_xpath(self, pid=isa.get('pid'))[0]
 
     def find_all_super(self):
+        """Returns a list of all ancestor tags."""
         supers = []
         super_tag = self.find_super()
         while super_tag is not None:
@@ -116,6 +130,7 @@ class ISOcatTag(TagBase, etree.ElementBase):
         return supers
 
     def find_top(self):
+        """Returns the top-most ancestor tag (or self)."""
         supers = self.find_all_super()
         if supers:
             return supers[-1]
@@ -231,6 +246,7 @@ class POSTagBase(ISOcatTag):
 
     @property
     def is_closed(self):
+        """If the tag is defined as a closed word class."""
         if self.pid in self.CLOSED:
             return True
         for super_tag in self.find_all_super():

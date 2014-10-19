@@ -47,15 +47,19 @@ NS = {'data': NS_DATA, 'text': NS_TEXT}
 
 
 class AnnotationLayerBase:
+    """Base class for annotation layers."""
 
     element = ''
 
     def __init__(self, initialdata=None):
+        #: The corpus this layer belongs to.
         self.corpus = None
+        #: The parent layer, in case of nested layers.
         self.parent = None
 
     @property
     def tcf(self):
+        """Return the layer as an `etree.Element`."""
         elem = etree.Element(P_TEXT + self.element)
         for child in self:
             elem.append(child.tcf)
@@ -63,6 +67,7 @@ class AnnotationLayerBase:
 
 
 class AnnotationLayer(AnnotationLayerBase, UserList):
+    """Annotation layer that acts like a list of Annotations."""
 
     def __init__(self, initialdata=None):
         AnnotationLayerBase.__init__(self)
@@ -74,6 +79,14 @@ class AnnotationLayer(AnnotationLayerBase, UserList):
 
 
 class AnnotationLayerWithIDs(AnnotationLayerBase, UserDict):
+    """Annotation layer that holds IDs of annotations.
+
+    This class acts like a hybrid of a list and a dict: It can be used like a
+    list, e.g. it has an `append` method and it iterates over its values. But
+    its items can also be set and retrieved using annotation IDs with dict-
+    like element access.
+
+    """
 
     def __init__(self, initialdata=None):
         AnnotationLayerBase.__init__(self)
@@ -103,11 +116,13 @@ class AnnotationLayerWithIDs(AnnotationLayerBase, UserDict):
 
 
 class AnnotationElement:
+    """Base class for annotation elements."""
 
     element = ''
     prefix = 'x'
 
     def __init__(self, *, tokens=None):
+        #: The annotation layer the element belongs to.
         self.parent = None
         self.id = None
         if not tokens:
@@ -117,6 +132,7 @@ class AnnotationElement:
 
     @property
     def tcf(self):
+        """Return the element as an `etree.Element`."""
         element = etree.Element(P_TEXT + self.element)
         if self.id is not None:
             element.set('ID', self.id)
@@ -153,6 +169,11 @@ class TextCorpus:
     The main class that represents a TextCorpus.
 
     A TextCorpus consists of a series of AnnotationLayers.
+
+    :param input_data: The XML input.
+    :type input_data: str or None
+    :param layers: A list of layers that should be parsed.
+    :type layers: list or None
 
     """
 
@@ -278,6 +299,14 @@ class TextCorpus:
 
     @property
     def tree(self):
+        """
+        Return the corpus as an `etree.ElementTree`.
+
+        The original XML tree is kept in memory, so that only newly added
+        layers get serialized. This makes sure that the original tree is not
+        touched.
+
+        """
         corpus_elem = self._tree.xpath('/data:D-Spin/text:TextCorpus',
                                       namespaces=NS)[0]
         for layer in self.new_layers:
@@ -286,6 +315,7 @@ class TextCorpus:
         return self._tree
 
     def add_layer(self, layer):
+        """Add an :class:`AnnotationLayerBase` object to the corpus."""
         name = type(layer).__name__.lower()
         setattr(self, name, layer)
         layer.corpus = self
@@ -293,9 +323,14 @@ class TextCorpus:
 
 
 class Text(AnnotationLayerBase):
+    """
+    The text annotation layer.
+
+    """
     element = 'text'
 
     def __init__(self, text):
+        #: The unannotated text.
         self.text = text
 
     @property
@@ -306,25 +341,34 @@ class Text(AnnotationLayerBase):
 
 
 class Tokens(AnnotationLayerWithIDs):
+    """
+    The tokens annotation layer.
+
+    It holds a sequence of :class:`Token` objects.
+
+    """
     element = 'tokens'
 
 
 class Token(AnnotationElement):
-    """
-    A Token.
-
-    """
+    """The token annotation element."""
     element = 'token'
     prefix = 't'
 
     def __init__(self, text):
         super().__init__()
+        #: The token text.
         self.text = text
+        #: The token lemma.
         self.lemma = None
+        #: The POS tag value.
         self.tag = None
         self.analysis = None
+        #: The :class:`NamedEntity` object for the token.
         self.entity = None
+        #: The :class:`Reference` object for the token.
         self.reference = None
+        #: The list of word senses for the token.
         self.wordsenses = []
 
     def __str__(self):
@@ -338,17 +382,18 @@ class Token(AnnotationElement):
 
     @property
     def postag(self):
-        """POS tag from a TagSet."""
+        """The POS tag as a
+        :class:`POSTagBase <tcflib.tagsets.base.POSTagBase>`"""
         tagset = TagSet(self.parent.corpus.postags.tagset)
         return tagset[self.tag]
 
     @property
     def semantic_unit(self):
         """
-        Get the semantic unit for a token.
+        The semantic unit for a token.
 
-        The semantic unit can be the lemma, a named entity, or a referenced
-        semantic unit.
+        The semantic unit can be the (disambiguated) lemma, a named entity,
+        or a referenced semantic unit.
 
         """
         def disambiguate(token):
@@ -370,6 +415,10 @@ class Token(AnnotationElement):
 
 
 class Lemmas(AnnotationLayer):
+    """
+    The lemmas annotation layer.
+
+    """
 
     element = 'lemmas'
 
@@ -385,6 +434,10 @@ class Lemmas(AnnotationLayer):
 
 
 class Wsd(AnnotationLayer):
+    """
+    The word senses (wsd) annotation layer.
+
+    """
 
     element = 'wsd'
 
@@ -403,6 +456,10 @@ class Wsd(AnnotationLayer):
 
 
 class POStags(AnnotationLayer):
+    """
+    The POStags annotation layer.
+
+    """
 
     element = 'POStags'
 
@@ -421,6 +478,12 @@ class POStags(AnnotationLayer):
 
 
 class NamedEntities(AnnotationLayerWithIDs):
+    """
+    The namedEntities annotation layer.
+
+    It holds a sequence of :class:`Token` objects.
+
+    """
 
     element = 'namedEntities'
 
@@ -436,6 +499,10 @@ class NamedEntities(AnnotationLayerWithIDs):
 
 
 class NamedEntity(AnnotationElement):
+    """
+    The token annotation element.
+
+    """
 
     element = 'entity'
     prefix = 'ne'
@@ -470,6 +537,10 @@ class NamedEntity(AnnotationElement):
 
 
 class References(AnnotationLayer):
+    """
+    The references annotation layer.
+
+    """
 
     element = 'references'
 
@@ -490,6 +561,17 @@ class References(AnnotationLayer):
 
 
 class Entity(AnnotationLayerWithIDs):
+    """
+    The entity annotation element.
+
+    This class represents a coreference entity inside the references
+    annotation layer. The entity inside the namedEntities annotation layer
+    is represented by the :class:`NamedEntity` class. In TCF, both share
+    the entity tag name.
+
+    An entity holds a sequence of :class:`Reference` objects.
+
+    """
 
     element = 'entity'
 
@@ -514,6 +596,10 @@ class Entity(AnnotationLayerWithIDs):
 
 
 class Reference(AnnotationElement):
+    """
+    The reference annotation element.
+
+    """
 
     element = 'reference'
     prefix = 'rc'
@@ -528,11 +614,13 @@ class Reference(AnnotationElement):
         super().__init__()
         self.type = type
         self.rel = rel
+        #: The target :class:`Reference`.
         self.target = target
         self._tokens = self._tokens_cls(tokens)
 
     @property
     def tokens(self):
+        """The tokens for this reference."""
         return self._tokens
 
     @tokens.setter
@@ -542,6 +630,7 @@ class Reference(AnnotationElement):
 
     @property
     def entity(self):
+        """The :class:`Entity` this reference belongs to."""
         return self.parent
 
     @property
@@ -557,31 +646,49 @@ class Reference(AnnotationElement):
 
 
 class Sentences(AnnotationLayerWithIDs):
+    """
+    The sentences annotation layer.
+
+    It holds a sequence of :class:`Sentence` objects.
+
+    """
 
     element = 'sentences'
 
 
 class Sentence(AnnotationElement):
     """
-    Class that represents a TCF sentence.
+    The token annotation element.
 
     """
+
     element = 'sentence'
     prefix = 's'
 
 
 class TextStructure(AnnotationLayer):
+    """
+    The textstructure annotation layer.
+
+    It holds a sequence of :class:`TextSpan` objects.
+
+    """
 
     element = 'textstructure'
 
 
 class TextSpan(AnnotationElement):
+    """
+    The token annotation element.
+
+    """
 
     element = 'textspan'
     prefix = 'ts'
 
     def __init__(self, type=None):
         super().__init__()
+        #: The type of span.
         self.type = type
 
     @property
@@ -599,6 +706,13 @@ class TextSpan(AnnotationElement):
 
 
 class Graph(AnnotationLayerBase):
+    """
+    The graph annotation layer.
+
+    This layer implements a graph API to store graph representations of the
+    text (e.g., cooccurrence graphs).
+
+    """
 
     element = 'graph'
 
@@ -729,6 +843,13 @@ class Graph(AnnotationLayerBase):
         return graph
 
 def serialize(obj):
+    """
+    Serialize an object into a byte string.
+
+    :param obj: A :class:`TextCorpus`, `etree.ElementTree` or `string`.
+    :rtype: bytes
+
+    """
     if isinstance(obj, TextCorpus):
         obj = obj.tree
     if hasattr(obj, 'xpath'):

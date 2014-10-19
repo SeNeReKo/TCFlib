@@ -38,10 +38,17 @@ from tcflib import tcf
 
 class Worker(object):
     """
-    A `Worker` is responsible for running a single transformation.
+    A :class:`Worker` is responsible for running a single transformation.
+    This is the base class.
 
-    Input data are passed to a `Worker` instance during initialization. The
-    `Worker` class implements a `run` method that returns the output data.
+    Input data are passed to a :class:`Worker` instance during
+    initialization. The :class:`Worker` class implements a :meth:`run`
+    method that returns the output data.
+
+    For efficiency reasons, a worker can get either a byte string or a
+    :class:`tcf.TextCorpus` as input. This allows to pass
+    :class:`tcf.TextCorpus` objects around without serializing them. If a byte
+    string serialization is required, use :func:`tcf.serialize`.
 
     """
 
@@ -49,6 +56,7 @@ class Worker(object):
     layers = None
 
     def __init__(self, **options):
+        """Initialize a Worker instance with a set of options."""
         self.options = argparse.Namespace()
         vars(self.options).update(self.__options__)
         if options:
@@ -61,75 +69,115 @@ class Worker(object):
         return self.run(input_data)
 
     def setup(self, input_data):
+        """Read input_data and parse them into a :class:`tcf.TextCorpus`."""
         if isinstance(input_data, tcf.TextCorpus):
             self.corpus = input_data
         else:
             self.corpus = tcf.TextCorpus(input_data, layers=self.layers)
 
     def run(self, input_data):
+        """
+        This method is called to perform the actual data transformation.
+        Subclasses must override this method.
+
+        """
         pass
 
 
 class AddingWorker(Worker):
     """
-    An `AddingWorker` adds annotations to the input data.
+    An :class:`AddingWorker` adds annotations to the input data.
 
     """
 
     def run(self, input_data):
+        """
+        Parse input data and run annotation.
+
+        Subclasses usually do not override this method, but
+        :meth:`add_annotations`.
+
+        """
         self.setup(input_data)
         self.add_annotations()
         return self.corpus
 
     def add_annotations(self):
+        """Subclasses usually override this method."""
         pass
 
 
 class ImportingWorker(Worker):
     """
-    An `ImportingWorker` converts input data to TCF.
+    An :class:`ImportingWorker` converts input data to TCF.
 
     """
     def setup(self, input_data):
         self.input_data = input_data
 
     def run(self, input_data):
+        """
+        Parse input data and run annotation.
+
+        Subclasses usually do not override this method, but
+        :meth:`import_`.
+
+        """
         self.setup(input_data)
         return self.import_()
 
     def import_(self):
+        """Subclasses usually override this method."""
         pass
 
 
 class ExportingWorker(Worker):
     """
-    A `ExportingWorker` converts TCF data into other formats.
+    A :class:`ExportingWorker` converts TCF data into other formats.
 
     """
 
     def run(self, input_data):
+        """
+        Parse input data and run annotation.
+
+        Subclasses usually do not override this method, but
+        :meth:`import_`.
+
+        """
         self.setup(input_data)
         return self.export()
 
     def export(self):
+        """Subclasses usually override this method."""
         raise NotImplementedError
 
 
 class RemoteWorker(Worker):
     """
-    A `RemoteWorker` defers the actual work to a web service.
+    A :class:`RemoteWorker` defers the actual work to a web service.
+
+    This class can either be instantiated directly, passing the `url`
+    parameter to its constructor, or it can be subclassed, setting the `url`
+    class variable.
 
     """
 
+    #: The URL of the remote service.
     url = ''
 
     def __init__(self, **options):
+        """
+        :param url: The URL of the web service that should be called.
+
+        """
         if 'url' in options:
             self.url = options['url']
             del options['url']
         super().__init__(**options)
 
     def run(self, input_data):
+        """Pass input_data to a remote service."""
         input_data = tcf.serialize(input_data)
         response = requests.post(self.url, params=vars(self.options),
                                  data=input_data)
@@ -137,6 +185,7 @@ class RemoteWorker(Worker):
 
 
 class Write(object):
+    """A dummy worker that writes its input into a file."""
 
     def __init__(self, filename):
         self.filename = filename
@@ -149,6 +198,7 @@ class Write(object):
 
 
 def Read(filename):
+    """A dummy worker that reads input from a file."""
     with open(filename, 'rb') as infile:
         return infile.read()
 
@@ -180,6 +230,13 @@ def get_arg_parser(worker_class=None):
 
 
 def run_as_cli(worker_class):
+    """
+    Run a worker from the commandline.
+
+    In order for a worker to be called from the command line, the module
+    defining the worker should call :func:`run_as_cli` when run standalone.
+
+    """
     # Parse commandline arguments
     arg_parser = get_arg_parser(worker_class)
     args = arg_parser.parse_args()
@@ -209,6 +266,7 @@ def run_as_cli(worker_class):
 
 
 def run_as_service(worker_class, port):
+    """Run a worker as a web service."""
     from bottle import request, route, run
 
     @route('/annotate', method='POST')
