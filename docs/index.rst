@@ -6,7 +6,7 @@
 Welcome to TCFlib’s documentation!
 ==================================
 
-TCFlib implements annotation pipelines using TCF as an interchange format. A pipeline consists of independent services that can be implemented in any language, as long as they consume and/or return TCF. This follows the design principles of the `WebLicht <http://weblicht.sfs.uni-tuebingen.de/weblichtwiki/index.php/Main_Page>` infrastructure.
+TCFlib implements annotation pipelines using TCF as an interchange format. A pipeline consists of independent services that can be implemented in any language, as long as they consume and/or return TCF. This follows the design principles of the `WebLicht <http://weblicht.sfs.uni-tuebingen.de/weblichtwiki/index.php/Main_Page>`_ infrastructure.
 
 TCFlib allows to *write* services in python3, and to *call* services from python3. Remote WebLicht services and local python/TCFlib services can be mixed freely.
 
@@ -48,19 +48,19 @@ TCF is a stand-off XML format that stores annotations as independent layers. Thi
 
 Note: Currently, only a subset of TCF is supported via the python API. Additions are welcome!
 
-See the :doc:`tcf`.
+See the :doc:`tcflib.tcf`.
 
 Building Annotation Services with TCFlib
 ----------------------------------------
 
-A tcf service subclasses one of :class:`ImportingWorker`, :class:`AddingWorker`, or :class:`ExportingWorker`.
+A tcf service subclasses one of :class:`ImportingWorker <tcflib.service.ImportingWorker>`, :class:`AddingWorker <tcflib.service.AddingWorker>`, or :class:`ExportingWorker <tcflib.service.ExportingWorker>`.
 
-See the :doc:`service`.
+See the :doc:`tcflib.service`.
 
 Tagsets in TCFlib
 -----------------
 
-TCFlib uses the MAF tagset as specified in ISOcat (`DC-1345 <http://www.isocat.org/datcat/DC-1345>`) as its universal tagset. Other tagsets are mapped onto DC-1345. Since DC-1345 uses a tag hierarchy, this allows to e.g. check if a token is a 'noun' or one of its subtags, like 'proper noun'.
+TCFlib uses the MAF tagset as specified in ISOcat (`DC-1345 <http://www.isocat.org/datcat/DC-1345>`_) as its universal tagset. Other tagsets are mapped onto DC-1345. Since DC-1345 uses a tag hierarchy, this allows to e.g. check if a token is a 'noun' or one of its subtags, like 'proper noun'.
 
 See the :doc:`tcflib.tagsets`.
 
@@ -70,6 +70,7 @@ Reference
 .. toctree::
    :maxdepth: 3
 
+   tutorial
    tcflib
 
 

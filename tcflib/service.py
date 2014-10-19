@@ -56,6 +56,7 @@ class Worker(object):
     layers = None
 
     def __init__(self, **options):
+        """Initialize a Worker instance with a set of options."""
         self.options = argparse.Namespace()
         vars(self.options).update(self.__options__)
         if options:
@@ -68,12 +69,18 @@ class Worker(object):
         return self.run(input_data)
 
     def setup(self, input_data):
+        """Read input_data and parse them into a :class:`tcf.TextCorpus`."""
         if isinstance(input_data, tcf.TextCorpus):
             self.corpus = input_data
         else:
             self.corpus = tcf.TextCorpus(input_data, layers=self.layers)
 
     def run(self, input_data):
+        """
+        This method is called to perform the actual data transformation.
+        Subclasses must override this method.
+
+        """
         pass
 
 
@@ -84,11 +91,19 @@ class AddingWorker(Worker):
     """
 
     def run(self, input_data):
+        """
+        Parse input data and run annotation.
+
+        Subclasses usually do not override this method, but
+        :meth:`add_annotations`.
+
+        """
         self.setup(input_data)
         self.add_annotations()
         return self.corpus
 
     def add_annotations(self):
+        """Subclasses usually override this method."""
         pass
 
 
@@ -101,10 +116,18 @@ class ImportingWorker(Worker):
         self.input_data = input_data
 
     def run(self, input_data):
+        """
+        Parse input data and run annotation.
+
+        Subclasses usually do not override this method, but
+        :meth:`import_`.
+
+        """
         self.setup(input_data)
         return self.import_()
 
     def import_(self):
+        """Subclasses usually override this method."""
         pass
 
 
@@ -115,10 +138,18 @@ class ExportingWorker(Worker):
     """
 
     def run(self, input_data):
+        """
+        Parse input data and run annotation.
+
+        Subclasses usually do not override this method, but
+        :meth:`import_`.
+
+        """
         self.setup(input_data)
         return self.export()
 
     def export(self):
+        """Subclasses usually override this method."""
         raise NotImplementedError
 
 
@@ -126,8 +157,13 @@ class RemoteWorker(Worker):
     """
     A :class:`RemoteWorker` defers the actual work to a web service.
 
+    This class can either be instantiated directly, passing the `url`
+    parameter to its constructor, or it can be subclassed, setting the `url`
+    class variable.
+
     """
 
+    #: The URL of the remote service.
     url = ''
 
     def __init__(self, **options):
@@ -141,6 +177,7 @@ class RemoteWorker(Worker):
         super().__init__(**options)
 
     def run(self, input_data):
+        """Pass input_data to a remote service."""
         input_data = tcf.serialize(input_data)
         response = requests.post(self.url, params=vars(self.options),
                                  data=input_data)

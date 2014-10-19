@@ -8,9 +8,9 @@ The idea of WebLicht is to make annotation tools available as web services. Thes
 Remote services
 ---------------
 
-To call a remote service, there are two options: Subclass the :class:`RemoteWorker` class, or just use it directly with the `url` parameter.
+To call a remote service, there are two options: Subclass the :class:`RemoteWorker <tcflib.service.RemoteWorker>` class, or just use it directly with the `url` parameter.
 
-As an example, the default plain-text-to-TCF converter can be implemented as a :class:`RemoteWorker`::
+As an example, the default plain-text-to-TCF converter can be implemented as a :class:`RemoteWorker <tcflib.service.RemoteWorker>`::
 
     from tcflib.service import RemoteWorker
 
@@ -23,14 +23,14 @@ As an example, the default plain-text-to-TCF converter can be implemented as a :
         }
         url = 'http://weblicht.sfs.uni-tuebingen.de/rws/service-converter/convert/qp'
 
-To convert or annotate data with any :class:`Worker`, it is first instantiated, with the possibility to override its default options. Then, the :meth:`Worker.run` method is called, passing the input data:
+To convert or annotate data with any :class:`Worker <tcflib.service.Worker>`, it is first instantiated, with the possibility to override its default options. Then, the :meth:`Worker.run <tcflib.service.Worker.run>` method is called, passing the input data:
 
 >>> from tcflib.examples.remote_tcf_converter import ToTCFConverter
 >>> worker = ToTCFConverter(language='en')
 >>> worker.run('This is a simple test.')
 b'<?xml version="1.0" encoding="UTF-8"?>\n<D-Spin xmlns="http://www.dspin.de/data" version="0.4">\n  <MetaData xmlns="http://www.dspin.de/data/metadata">\n    <source></source>\n  </MetaData>\n  <TextCorpus xmlns="http://www.dspin.de/data/textcorpus" lang="en">\n    <text>This is a simple test.</text>\n  </TextCorpus>\n</D-Spin>'
 
-Alternatively, one may use :class:`RemoteWorker` directly, passing the `url` parameter. Note that in this case, all required options must be specified explicitly:
+Alternatively, one may use :class:`RemoteWorker <tcflib.service.RemoteWorker>` directly, passing the `url` parameter. Note that in this case, all required options must be specified explicitly:
 
 >>> from tcflib.service import RemoteWorker
 >>> worker = RemoteWorker(url='http://weblicht.sfs.uni-tuebingen.de/rws/service-converter/convert/qp',
@@ -47,7 +47,7 @@ In some cases, the available services do not match the requirements. TCFlib make
 Building pipelines
 ------------------
 
-Services can be chained using a pipe syntax. The :meth:`Worker.run` method is called implicitly. For convenience, :class:`Read` and :class:`Write` pseudo-Workers are provided that handle reading and writing data from local files.
+Services can be chained using a pipe syntax. The :meth:`Worker.run <tcflib.service.Worker.run>` method is called implicitly. For convenience, :class:`Read <tcflib.service.Read>` and :class:`Write <tcflib.service.Write>` pseudo-Workers are provided that handle reading and writing data from local files.
 
 A complete pipeline that does POS tagging, lemmatisation, and exports files in the `mallet <http://mallet.cs.umass.edu/>`_ format for topic modelling looks like this::
 
@@ -67,4 +67,4 @@ A complete pipeline that does POS tagging, lemmatisation, and exports files in t
 
 .. rubric:: Footnotes
 
-.. [#remark] A first version of this tutorial was published as a `blog post <http://senereko.hypotheses.org/11>` on `Gods, Graves and Graphs <http://senereko.hypotheses.org/>`.
+.. [#remark] A first version of this tutorial was published as a `blog post <http://senereko.hypotheses.org/11>`_ on `Gods, Graves and Graphs <http://senereko.hypotheses.org/>`_.
