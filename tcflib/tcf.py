@@ -788,7 +788,7 @@ class Graph(AnnotationLayerBase):
         node = self.node(name)
         if node is None:
             node = self.add_node(name, tokenIDs=[token.id])
-            if token.postag:
+            if token.postag is not None:
                 node['type'] = token.postag.name
             if token.entity:
                     node['class'] = token.entity.class_ or ''
