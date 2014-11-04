@@ -797,12 +797,14 @@ class Graph(AnnotationLayerBase):
                 node['tokenIDs'].append(token.id)
         return node
 
-    def edge_for_tokens(self, source, target):
-        names = [getattr(token, self.label)
-                 for token in (source, target)]
-        edge = self.edge(*names)
+    def edge_for_tokens(self, source, target, loops=False):
+        source, target = [getattr(token, self.label)
+                          for token in (source, target)]
+        if not loops and source == target:
+            raise LoopError
+        edge = self.edge(source, target)
         if edge is None:
-            edge = self.add_edge(*names, weight=1)
+            edge = self.add_edge(source, target, weight=1)
         else:
             edge['weight'] += 1
         return edge
@@ -841,6 +843,13 @@ class Graph(AnnotationLayerBase):
                 else:
                     edge.set(key, str(value))
         return graph
+
+
+class LoopError(Exception):
+    """This exception is raised if a request to add an edge would result in a loop."""
+    def __str__(self):
+        return 'Trying to add a loop to the graph.'
+
 
 def serialize(obj):
     """
