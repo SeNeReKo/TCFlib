@@ -798,16 +798,23 @@ class Graph(AnnotationLayerBase):
                 node['tokens'].append(token)
         return node
 
-    def edge_for_tokens(self, source, target, loops=False):
-        source, target = [getattr(token, self.label)
-                          for token in (source, target)]
-        if not loops and source == target:
+    def edge_for_tokens(self, source, target, loops=False, unique=False):
+        source_name, target_name = [getattr(token, self.label)
+                                    for token in (source, target)]
+        if not loops and source_name == target_name:
             raise LoopError
-        edge = self.edge(source, target)
+        edge = self.edge(source_name, target_name)
+        edge_tokens = {source, target}
         if edge is None:
-            edge = self.add_edge(source, target, weight=1)
+            edge = self.add_edge(source_name, target_name,
+                                 weight=1, tokens=[edge_tokens])
         else:
-            edge['weight'] += 1
+            if edge_tokens in edge['tokens']:
+                if not unique:
+                    edge['weight'] += 1
+            else:
+                edge['weight'] += 1
+                edge['tokens'].append(edge_tokens)
         return edge
 
     @property
@@ -840,7 +847,11 @@ class Graph(AnnotationLayerBase):
                                     source=nid.format(link.source),
                                     target=nid.format(link.target))
             for key, value in link.attributes().items():
-                if isinstance(value, (list, tuple)):
+                if key == 'tokens':
+                    edge.set('tokenPairIDs',
+                             ','.join(['{} {}'.format(a.id, b.id)
+                                       for a, b in value]))
+                elif isinstance(value, (list, tuple)):
                     edge.set(key, ' '.join(value))
                 elif isinstance(value, bool):
                     edge.set(key, str(value).lower())
