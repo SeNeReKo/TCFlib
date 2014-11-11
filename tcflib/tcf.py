@@ -27,6 +27,7 @@ This module provides an API for TCF documents.
 """
 
 from collections import UserList, UserDict, OrderedDict
+from itertools import chain
 from warnings import warn
 import logging
 
@@ -787,14 +788,14 @@ class Graph(AnnotationLayerBase):
         name = getattr(token, self.label)
         node = self.node(name)
         if node is None:
-            node = self.add_node(name, tokenIDs=[token.id])
+            node = self.add_node(name, tokens=[token])
             if token.postag is not None:
                 node['type'] = token.postag.name
             if token.entity:
                     node['class'] = token.entity.class_ or ''
         else:
-            if not token.id in node['tokenIDs']:
-                node['tokenIDs'].append(token.id)
+            if not token in node['tokens']:
+                node['tokens'].append(token)
         return node
 
     def edge_for_tokens(self, source, target, loops=False):
@@ -817,7 +818,7 @@ class Graph(AnnotationLayerBase):
         nid = 'n_{}'
         # simplify the graph, i.e., merge
         self._graph.simplify(combine_edges={'weight': sum,
-                             'tokenIDs': lambda x: ' '.join(x)})
+                             'tokens': lambda x: list(chain.from_iterable(x))})
         for vertex in self._graph.vs:
             node = etree.SubElement(nodes, P_TEXT + 'node')
             node.text = vertex['name']
@@ -825,6 +826,9 @@ class Graph(AnnotationLayerBase):
             for key, value in vertex.attributes().items():
                 if key == 'name':
                     continue
+                elif key == 'tokens':
+                    node.set('tokenIDs',
+                             ' '.join([token.id for token in value]))
                 elif isinstance(value, (list, tuple)):
                     node.set(key, ' '.join(value))
                 elif isinstance(value, bool):
