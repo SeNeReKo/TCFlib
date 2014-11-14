@@ -254,7 +254,7 @@ class TextCorpus:
                     targets = {}
                     extref_elem = entity_elem.find(P_TEXT + 'extref')
                     if extref_elem is not None:
-                        entity.extref = extref.get('refid')
+                        entity.extref = extref_elem.get('refid')
                     for ref_elem in entity_elem.findall(P_TEXT + 'reference'):
                         reference = Reference()
                         reference.id = ref_elem.get('ID')
