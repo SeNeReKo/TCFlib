@@ -186,16 +186,22 @@ class RemoteWorker(Worker):
 
 
 class Write(object):
-    """A dummy worker that writes its input into a file."""
+    """
+    A dummy worker that writes its input into a file.
+
+    It returns the input unchanged, so it can be used to write out intermediate
+    results in a chain.
+
+    """
 
     def __init__(self, filename):
         self.filename = filename
 
     def __ror__(self, input_data):
         if input_data:
-            input_data = tcf.serialize(input_data)
             with open(self.filename, 'wb') as outfile:
-                outfile.write(input_data)
+                outfile.write(tcf.serialize(input_data))
+        return input_data
 
 
 def Read(filename):
