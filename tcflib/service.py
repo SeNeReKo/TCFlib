@@ -57,6 +57,7 @@ class Worker(object):
 
     def __init__(self, **options):
         """Initialize a Worker instance with a set of options."""
+        logging.debug('Init worker {}.'.format(type(self).__name__))
         self.options = argparse.Namespace()
         vars(self.options).update(self.__options__)
         if options:
