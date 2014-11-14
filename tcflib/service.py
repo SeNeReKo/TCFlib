@@ -143,7 +143,7 @@ class ExportingWorker(Worker):
         Parse input data and run annotation.
 
         Subclasses usually do not override this method, but
-        :meth:`import_`.
+        :meth:`export`.
 
         """
         self.setup(input_data)
