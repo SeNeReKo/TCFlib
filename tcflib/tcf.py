@@ -223,6 +223,7 @@ class TextCorpus:
                     self.sentences[sentence_elem.get('ID')] = sentence
             elif tag == 'lemmas':
                 logging.debug('Reading layer "{}".'.format(tag))
+                self.add_layer(Lemmas())
                 for lemma_elem in layer_elem:
                     for token_id in lemma_elem.get('tokenIDs').split():
                         self.tokens[token_id].lemma = lemma_elem.text
