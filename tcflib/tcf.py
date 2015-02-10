@@ -233,6 +233,32 @@ class TextCorpus:
                 for tag_elem in layer_elem:
                     for token_id in tag_elem.get('tokenIDs').split():
                         self.tokens[token_id].tag = tag_elem.text
+            elif tag == 'depparsing':
+                logging.debug('Reading layer "{}".'.format(tag))
+                self.add_layer(DepParsing(
+                        tagset=layer_elem.get('tagset'),
+                        emptytoks=layer_elem.get('emptytoks') == 'true',
+                        multigovs=layer_elem.get('multigovs') == 'true'))
+                for parse_elem in layer_elem:
+                    parse = DepParse()
+                    for dep_elem in parse_elem:
+                        func = dep_elem.get('func')
+                        if 'govIDs' in dep_elem.attrib:
+                            gov_tokens = [self.tokens[token_id]
+                                          for token_id
+                                          in dep_elem.get('govIDs').split()]
+                        else:
+                            gov_tokens = None
+                        if 'depIDs' in dep_elem.attrib:
+                            dep_tokens = [self.tokens[token_id]
+                                          for token_id
+                                          in dep_elem.get('depIDs').split()]
+                        else:
+                            dep_tokens = None
+                        parse.append(Dependency(func=func,
+                                                gov_tokens=gov_tokens,
+                                                dep_tokens=dep_tokens))
+                    self.depparsing.append(parse)
             elif tag == 'namedEntities':
                 logging.debug('Reading layer "{}".'.format(tag))
                 self.add_layer(NamedEntities(layer_elem.get('type')))
@@ -477,6 +503,72 @@ class POStags(AnnotationLayer):
                                      tokenIDs=token.id)
             child.text = token.tag
         return element
+
+
+class DepParsing(AnnotationLayerWithIDs):
+    """
+    The depparsing annotation layer.
+
+    It holds a sequence of :class:`DepParse` objects.
+
+    """
+
+    element = 'depparsing'
+
+    def __init__(self, tagset, emptytoks=False, multigovs=False):
+        super().__init__()
+        self.tagset = tagset
+        self.emptytoks = emptytoks
+        self.multigovs = multigovs
+        
+    @property
+    def tcf(self):
+        element = super().tcf
+        element.set('tagset', self.tagset)
+        element.set('emptytoks', str(self.emptytoks).lower())
+        element.set('multigovs', str(self.multigovs).lower())
+        return element
+
+
+class DepParse(AnnotationLayer):
+    """
+    The parse annotation element.
+
+    It holds a sequence of :class:`Dependency` objects.
+
+    """
+    
+    element = 'parse'
+    prefix = 'd'
+
+    def __init__(self):
+        super().__init__()
+        self.id = None
+
+
+class Dependency(AnnotationElement):
+        """
+        The dependecy annotation element.
+
+        """
+
+        element = 'dependecy'
+
+        def __init__(self, func, gov_tokens=None, dep_tokens=None):
+            super().__init__()
+            self.func = func
+            self.gov_tokens = gov_tokens or []
+            self.dep_tokens = dep_tokens or []
+
+        @property
+        def tcf(self):
+            element = super().tcf
+            element.set('func', self.func)
+            for attrib, tokens in (('govIDs', self.gov_tokens),
+                                   ('depIDs', self.dep_tokens)):
+                if tokens:
+                    element.set(attrib, ' '.join([token.id for token
+                                                  in self.gov_tokens]))
 
 
 class NamedEntities(AnnotationLayerWithIDs):
