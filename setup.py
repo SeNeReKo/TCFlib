@@ -9,6 +9,6 @@ setup(name='TCFlib',
       author='Frederik Elwert',
       author_email='frederik.elwert@web.de',
       url='https://github.com/SeNeReKo/TCFlib',
-      packages=['tcflib'],
-#      package_data={'tcflib': ['data/dcs-119.dcif']},
+      packages=['tcflib', 'tcflib.tagsets'],
+      package_data={'tcflib.tagsets': ['data/dc-1345.dcif']},
      )
