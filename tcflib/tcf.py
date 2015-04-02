@@ -27,7 +27,7 @@ This module provides an API for TCF documents.
 """
 
 from collections import UserList, UserDict, OrderedDict
-from itertools import chain
+from itertools import chain, product
 from warnings import warn
 import logging
 
@@ -66,6 +66,12 @@ class AnnotationLayerBase:
             elem.append(child.tcf)
         return elem
 
+    def append(self, item):
+        item.parent = self
+        if hasattr(item, 'corpus'):
+            # Item is an AnnotationLayer itself
+            item.corpus = self.corpus
+
 
 class AnnotationLayer(AnnotationLayerBase, UserList):
     """Annotation layer that acts like a list of Annotations."""
@@ -75,7 +81,7 @@ class AnnotationLayer(AnnotationLayerBase, UserList):
         UserList.__init__(self, initialdata)
 
     def append(self, item):
-        item.parent = self
+        AnnotationLayerBase.append(self, item)
         self.data.append(item)
 
 
@@ -99,7 +105,7 @@ class AnnotationLayerWithIDs(AnnotationLayerBase, UserDict):
         return iter(self.data.values())
 
     def __setitem__(self, key, item):
-        item.parent = self
+        AnnotationLayerBase.append(self, item)
         item.id = key
         self.data[key] = item
 
@@ -107,7 +113,7 @@ class AnnotationLayerWithIDs(AnnotationLayerBase, UserDict):
         return self.data.keys()
 
     def append(self, item, n=None):
-        item.parent = self
+        AnnotationLayerBase.append(self, item)
         if not item.id:
             if n is None:
                 n = len(self.data)
@@ -126,10 +132,7 @@ class AnnotationElement:
         #: The annotation layer the element belongs to.
         self.parent = None
         self.id = None
-        if not tokens:
-            self.tokens = []
-        else:
-            self.tokens = tokens
+        self.tokens = tokens or []
 
     @property
     def tcf(self):
@@ -544,6 +547,37 @@ class DepParse(AnnotationLayer):
     def __init__(self):
         super().__init__()
         self.id = None
+        try:
+            self._graph = igraph.Graph(directed=True)
+            self._graph.vs['name'] = ''  # Ensure 'name' attribute is present.
+        except NameError:
+            logging.warn('The igraph package has to be installed to use the '
+                         'tree interface to the dependency annotation layer.')
+            self._graph = None
+
+    @property
+    def root(self):
+        if self._graph is not None:
+            root_node = self._graph.vs.find(_indegree=0)
+            return self.corpus.tokens[root_node['name']]
+        else:
+            for dependency in self:
+                if dependency.dep_tokens and not dependency.gov_tokens:
+                    return dependency.dep_tokens[0]
+
+    def append(self, item):
+        super().append(item)
+        if self._graph is not None:
+            for gov, dep in product(item.gov_tokens, item.dep_tokens):
+                for name in (gov.id, dep.id):
+                    if not name in self._graph.vs['name']:
+                        self._graph.add_vertex(name)
+                self._graph.add_edge(gov.id, dep.id)
+
+    def find_dependents(self, token):
+        node = self._graph.vs.find(token.id)
+        dep_nodes = node.neighbors(mode=igraph.OUT)
+        return [self.corpus.tokens[n['name']] for n in dep_nodes]
 
 
 class Dependency(AnnotationElement):
@@ -575,7 +609,7 @@ class NamedEntities(AnnotationLayerWithIDs):
     """
     The namedEntities annotation layer.
 
-    It holds a sequence of :class:`Token` objects.
+    It holds a sequence of :class:`NamedEntity` objects.
 
     """
 
