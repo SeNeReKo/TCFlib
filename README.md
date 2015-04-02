@@ -10,7 +10,11 @@ Note: The API is not final, yet. Feedback and patches are highly welcome!
 Installation
 ------------
 
-TCFlib is not yet on PyPI, so it is recommended to install it directly from GitHub:
+TCFlib is available from PyPI, so you can install it with pip:
+
+    pip install tcflib
+
+You can install the development version directly from GitHub:
 
     pip install git+https://github.com/SeNeReKo/TCFlib.git
 
