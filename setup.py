@@ -4,7 +4,7 @@
 from distutils.core import setup
 
 setup(name='TCFlib',
-      version='0.2.3',
+      version='0.2.4',
       description='Python TCF library',
       author='Frederik Elwert',
       author_email='frederik.elwert@web.de',
