@@ -94,7 +94,10 @@ class PennTag(MappingTag, POSTag):
         'NPS': 'http://www.isocat.org/datcat/DC-1371',  # properNoun
         'SENT': 'http://www.isocat.org/datcat/DC-2075',  # mainPunctuation
         'IN/that': 'http://www.isocat.org/datcat/DC-1393',  # subordinatingConjunction
+        "''": 'http://www.isocat.org/datcat/DC-2076',  # secondaryPunctuation  FIXME
         '``': 'http://www.isocat.org/datcat/DC-2076',  # secondaryPunctuation  FIXME
+        "#": 'http://www.isocat.org/datcat/DC-1891',  # unclassifiedResidual FIXME
+        '$': 'http://www.isocat.org/datcat/DC-1891',  # unclassifiedResidual FIXME
     }
     pid2name = {v: k for k, v in name2pid.items()}
 
