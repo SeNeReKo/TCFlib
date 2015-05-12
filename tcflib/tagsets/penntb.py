@@ -38,66 +38,61 @@ class PennTag(MappingTag, POSTag):
         'EX': 'http://www.isocat.org/datcat/DC-1917',  # particleAdverb FIXME
         'FW': 'http://www.isocat.org/datcat/DC-1891',  # unclassifiedResidual
         'IN': 'http://www.isocat.org/datcat/DC-1393',  # subordinatingConjunction
+        'IN/that': 'http://www.isocat.org/datcat/DC-1393',  # subordinatingConjunction
         'JJ': 'http://www.isocat.org/datcat/DC-1230',  # adjective
         'JJR': 'http://www.isocat.org/datcat/DC-1230',  # adjective
         'JJS': 'http://www.isocat.org/datcat/DC-1230',  # adjective
         'LS': 'http://www.isocat.org/datcat/DC-1438',  # bullet
         'MD': 'http://www.isocat.org/datcat/DC-1329',  # modal
-        'NN': 'http://www.isocat.org/datcat/DC-1333',  # noun
-        'NNS': 'http://www.isocat.org/datcat/DC-1333',  # noun
-        'NNP': 'http://www.isocat.org/datcat/DC-1371',  # properNoun
-        'NNPS': 'http://www.isocat.org/datcat/DC-1371',  # properNoun
+        'NN': 'http://www.isocat.org/datcat/DC-1256',  # commonNoun
+        'NNS': 'http://www.isocat.org/datcat/DC-1256',  # commonNoun
+        'NP': 'http://www.isocat.org/datcat/DC-1371',  # properNoun
+        'NPS': 'http://www.isocat.org/datcat/DC-1371',  # properNoun
         'PDT': 'http://www.isocat.org/datcat/DC-1272',  # determiner FIXME
         'POS': 'http://www.isocat.org/datcat/DC-1895',  # possessiveParticle
-        'PRP': 'http://www.isocat.org/datcat/DC-1463',  # personalPronoun
-        'PRP$': 'http://www.isocat.org/datcat/DC-1359',  # possessivePronoun
+        'PP': 'http://www.isocat.org/datcat/DC-1463',  # personalPronoun
+        'PP$': 'http://www.isocat.org/datcat/DC-1359',  # possessivePronoun
         'RB': 'http://www.isocat.org/datcat/DC-1232',  # adverb
         'RBR': 'http://www.isocat.org/datcat/DC-1232',  # adverb
         'RBS': 'http://www.isocat.org/datcat/DC-1232',  # adverb
         'RP': 'http://www.isocat.org/datcat/DC-1917',  # particleAdverb
+        'SENT': 'http://www.isocat.org/datcat/DC-2075',  # mainPunctuation
         'SYM': 'http://www.isocat.org/datcat/DC-1891',  # unclassifiedResidual FIXME
         'TO': 'http://www.isocat.org/datcat/DC-1896',  # infinitiveParticle
         'UH': 'http://www.isocat.org/datcat/DC-1318',  # interjection
-        'VB': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
-        'VBZ': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
-        'VBP': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
-        'VBN': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
-        'VBG': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
-        'WDT': 'http://www.isocat.org/datcat/DC-1272',  # determiner
-        'WP': 'http://www.isocat.org/datcat/DC-1463',  # personalPronoun
-        'WP$': 'http://www.isocat.org/datcat/DC-1359',  # possessivePronoun
-        'WRB': 'http://www.isocat.org/datcat/DC-1232',  # adverb
-        '.': 'http://www.isocat.org/datcat/DC-2075',  # mainPunctuation
-        ',': 'http://www.isocat.org/datcat/DC-2076',  # secondaryPunctuation
-        ':': 'http://www.isocat.org/datcat/DC-1439',  # colon
-        #'(': 'http://www.isocat.org/datcat/DC-2078',  # openPunctuation  FIXME: Not in dcif data
-        #')': 'http://www.isocat.org/datcat/DC-2079',  # closePunctuation  FIXME: Not in dcif data
-        '(': 'http://www.isocat.org/datcat/DC-2076',  # secondaryPunctuation
-        ')': 'http://www.isocat.org/datcat/DC-2076',  # secondaryPunctuation
-        ## additional tags
-        'VBD': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
-        'VH': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
-        'VHD': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
-        'VHG': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
-        'VHN': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
-        'VHP': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
-        'VHZ': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
+        'VB': 'http://www.isocat.org/datcat/DC-1263',  # copula
+        'VBD': 'http://www.isocat.org/datcat/DC-1263',  # copula
+        'VBG': 'http://www.isocat.org/datcat/DC-1263',  # copula
+        'VBN': 'http://www.isocat.org/datcat/DC-1263',  # copula
+        'VBP': 'http://www.isocat.org/datcat/DC-1263',  # copula
+        'VBZ': 'http://www.isocat.org/datcat/DC-1263',  # copula
+        'VH': 'http://www.isocat.org/datcat/DC-3003',  # lightVerb
+        'VHD': 'http://www.isocat.org/datcat/DC-3003',  # lightVerb
+        'VHG': 'http://www.isocat.org/datcat/DC-3003',  # lightVerb
+        'VHN': 'http://www.isocat.org/datcat/DC-3003',  # lightVerb
+        'VHP': 'http://www.isocat.org/datcat/DC-3003',  # lightVerb
+        'VHZ': 'http://www.isocat.org/datcat/DC-3003',  # lightVerb
         'VV': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
         'VVD': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
         'VVG': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
         'VVN': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
         'VVP': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
         'VVZ': 'http://www.isocat.org/datcat/DC-1400',  # mainVerb
-        'PP': 'http://www.isocat.org/datcat/DC-1463',  # personalPronoun
-        'PP$': 'http://www.isocat.org/datcat/DC-1359',  # possessivePronoun
-        'NP': 'http://www.isocat.org/datcat/DC-1371',  # properNoun
-        'NPS': 'http://www.isocat.org/datcat/DC-1371',  # properNoun
-        'SENT': 'http://www.isocat.org/datcat/DC-2075',  # mainPunctuation
-        'IN/that': 'http://www.isocat.org/datcat/DC-1393',  # subordinatingConjunction
-        "''": 'http://www.isocat.org/datcat/DC-2076',  # secondaryPunctuation  FIXME
-        '``': 'http://www.isocat.org/datcat/DC-2076',  # secondaryPunctuation  FIXME
-        "#": 'http://www.isocat.org/datcat/DC-1891',  # unclassifiedResidual FIXME
+        'WDT': 'http://www.isocat.org/datcat/DC-1272',  # determiner
+        'WP': 'http://www.isocat.org/datcat/DC-1463',  # personalPronoun
+        'WP$': 'http://www.isocat.org/datcat/DC-1359',  # possessivePronoun
+        'WRB': 'http://www.isocat.org/datcat/DC-1232',  # adverb
+        '#': 'http://www.isocat.org/datcat/DC-1891',  # unclassifiedResidual FIXME
         '$': 'http://www.isocat.org/datcat/DC-1891',  # unclassifiedResidual FIXME
+        '"': 'http://www.isocat.org/datcat/DC-2076',  # secondaryPunctuation  FIXME
+        '``': 'http://www.isocat.org/datcat/DC-2076',  # secondaryPunctuation  FIXME
+        "''": 'http://www.isocat.org/datcat/DC-2076',  # secondaryPunctuation  FIXME
+        #'(': 'http://www.isocat.org/datcat/DC-2078',  # openPunctuation  FIXME: Not in dcif data
+        #')': 'http://www.isocat.org/datcat/DC-2079',  # closePunctuation  FIXME: Not in dcif data
+        '(': 'http://www.isocat.org/datcat/DC-2076',  # secondaryPunctuation  FIXME
+        ')': 'http://www.isocat.org/datcat/DC-2076',  # secondaryPunctuation  FIXME
+        ',': 'http://www.isocat.org/datcat/DC-2076',  # secondaryPunctuation
+        ':': 'http://www.isocat.org/datcat/DC-1439',  # colon
     }
     pid2name = {v: k for k, v in name2pid.items()}
 
