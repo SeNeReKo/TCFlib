@@ -198,17 +198,16 @@ class Write(object):
         self.filename = filename
 
     def __ror__(self, input_data):
-        output_data = input_data
-        if output_data:
-            if isinstance(output_data, tcf.TextCorpus):
-                output_data = output_data.tree
-            if hasattr(output_data, 'xpath'):
-                output_data.write(self.filename, encoding='utf8',
+        if input_data:
+            if isinstance(input_data, tcf.TextCorpus):
+                input_data.write(self.filename)
+            elif hasattr(input_data, 'xpath'):
+                input_data.write(self.filename, encoding='utf8',
                                  pretty_print=True,
                                  xml_declaration=True)
             else:
                 with open(self.filename, 'wb') as outfile:
-                    outfile.write(tcf.serialize(output_data))
+                    outfile.write(tcf.serialize(input_data))
         return input_data
 
 
