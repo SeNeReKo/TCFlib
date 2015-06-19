@@ -106,8 +106,15 @@ class AnnotationLayerWithIDs(AnnotationLayerBase, UserDict):
 
     def __setitem__(self, key, item):
         AnnotationLayerBase.append(self, item)
-        item.id = key
-        self.data[key] = item
+        if key is None:
+            # When reading a file that has no IDs set,
+            # behave like appending an element.
+            # FIXME: This alters the input structure,
+            # as it inserts previously absent IDs.
+            self.append(item)
+        else:
+            item.id = key
+            self.data[key] = item
 
     def keys(self):
         return self.data.keys()
