@@ -61,7 +61,7 @@ class AnnotationLayerBase:
     @property
     def tcf(self):
         """Return the layer as an `etree.Element`."""
-        elem = etree.Element(P_TEXT + self.element)
+        elem = etree.Element(P_TEXT + self.element, nsmap={None: NS_TEXT})
         for child in self:
             elem.append(child.tcf)
         return elem
@@ -352,6 +352,34 @@ class TextCorpus:
         self.new_layers = []
         return self._tree
 
+    def write(self, file_or_path, *, encoding='utf-8', pretty_print=True):
+        """
+        Write the XML tree into a file.
+
+        This method writes each layer successively and discards it afterwards.
+        This is more memory efficient than building the whole tree at once.
+
+        :param file_or_path: The target to which to write the XML tree.
+        :type file_or_path: A file object or a file path.
+
+        """
+        with etree.xmlfile(file_or_path, encoding=encoding) as xf:
+            with xf.element(P_DATA + 'D-Spin', nsmap={None: NS_DATA}):
+                # TODO: Write MetaData.
+                with xf.element(P_TEXT + 'TextCorpus', lang=self.lang,
+                                nsmap={None: NS_TEXT}):
+                    corpus_elem = self._tree.xpath('/data:D-Spin/text:TextCorpus',
+                                                  namespaces=NS)[0]
+                    # Write layers from the input tree.
+                    for layer_elem in corpus_elem:
+                        xf.write(layer_elem, pretty_print=pretty_print)
+                        layer_elem = None
+                    # Write newly added layers.
+                    for layer in self.new_layers:
+                        layer_elem = getattr(self, layer).tcf
+                        xf.write(layer_elem, pretty_print=pretty_print)
+                        layer_elem = None
+
     def add_layer(self, layer):
         """Add an :class:`AnnotationLayerBase` object to the corpus."""
         name = type(layer).__name__.lower()
@@ -373,7 +401,7 @@ class Text(AnnotationLayerBase):
 
     @property
     def tcf(self):
-        element = etree.Element(P_TEXT + 'text')
+        element = etree.Element(P_TEXT + 'text', nsmap={None: NS_TEXT})
         element.text = self.text
         return element
 
@@ -462,7 +490,7 @@ class Lemmas(AnnotationLayer):
 
     @property
     def tcf(self):
-        element = etree.Element(P_TEXT + self.element)
+        element = etree.Element(P_TEXT + self.element, nsmap={None: NS_TEXT})
         for i, token in enumerate(self.corpus.tokens):
             child = etree.SubElement(element, P_TEXT + 'lemma',
                                      ID='le_{}'.format(i),
@@ -484,7 +512,8 @@ class Wsd(AnnotationLayer):
 
     @property
     def tcf(self):
-        element = etree.Element(P_TEXT + self.element, src=self.source)
+        element = etree.Element(P_TEXT + self.element, src=self.source,
+                                nsmap={None: NS_TEXT})
         for token in self.corpus.tokens:
             if token.wordsenses:
                 child = etree.SubElement(element, P_TEXT + 'ws',
@@ -506,7 +535,8 @@ class POStags(AnnotationLayer):
 
     @property
     def tcf(self):
-        element = etree.Element(P_TEXT + self.element, tagset=self.tagset)
+        element = etree.Element(P_TEXT + self.element, tagset=self.tagset,
+                                nsmap={None: NS_TEXT})
         for i, token in enumerate(self.corpus.tokens):
             child = etree.SubElement(element, P_TEXT + 'tag',
                                      ID='pt_{}'.format(i),
@@ -938,28 +968,34 @@ class Graph(AnnotationLayerBase):
         if not loops and source_name == target_name:
             raise LoopError
         edge = self.edge(source_name, target_name)
-        edge_tokens = {source, target}
+        edge_tokens = frozenset((source, target))
         if edge is None:
             edge = self.add_edge(source_name, target_name,
-                                 weight=1, tokens=[edge_tokens])
+                                 weight=1,
+                                 tokens=OrderedDict({edge_tokens: 1}))
         else:
-            if edge_tokens in edge['tokens']:
+            if edge_tokens in edge['tokens'].keys():
                 if not unique:
                     edge['weight'] += 1
+                    edge['tokens'][edge_tokens] += 1
             else:
                 edge['weight'] += 1
-                edge['tokens'].append(edge_tokens)
+                edge['tokens'][edge_tokens] = 1
         return edge
 
     @property
     def tcf(self):
-        graph = etree.Element(P_TEXT + 'graph')
+        graph = etree.Element(P_TEXT + 'graph', nsmap={None: NS_TEXT})
         nodes = etree.SubElement(graph, P_TEXT + 'nodes')
         edges = etree.SubElement(graph, P_TEXT + 'edges')
         nid = 'n_{}'
+        # The graph should not have multiple edges.
+        if self._graph.has_multiple():
+            logging.warn('Multiple edges detected. This cannot be handled '
+                         'by some graph analysis applications.')
         # simplify the graph, i.e., merge
-        self._graph.simplify(combine_edges={'weight': sum,
-                             'tokens': lambda x: list(chain.from_iterable(x))})
+        #self._graph.simplify(combine_edges={'weight': sum,
+        #                     'tokens': lambda x: list(chain.from_iterable(x))})
         for vertex in self._graph.vs:
             node = etree.SubElement(nodes, P_TEXT + 'node')
             node.text = vertex['name']
@@ -982,9 +1018,10 @@ class Graph(AnnotationLayerBase):
                                     target=nid.format(link.target))
             for key, value in link.attributes().items():
                 if key == 'tokens':
-                    edge.set('tokenPairIDs',
-                             ','.join(['{} {}'.format(a.id, b.id)
-                                       for a, b in value]))
+                    for (a, b), weight in value.items():
+                        etree.SubElement(edge, P_TEXT + 'tokenEdge',
+                                         source=str(a.id), target=str(b.id),
+                                         weight=str(weight))
                 elif isinstance(value, (list, tuple)):
                     edge.set(key, ' '.join(value))
                 elif isinstance(value, bool):
