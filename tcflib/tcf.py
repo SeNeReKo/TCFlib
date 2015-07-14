@@ -575,10 +575,10 @@ class DepParse(AnnotationLayer):
     def append(self, item):
         super().append(item)
         if self._graph is not None:
+            for token in set(item.gov_tokens) | set(item.dep_tokens):
+                if not token.id in self._graph.vs['name']:
+                    self._graph.add_vertex(token.id)
             for gov, dep in product(item.gov_tokens, item.dep_tokens):
-                for name in (gov.id, dep.id):
-                    if not name in self._graph.vs['name']:
-                        self._graph.add_vertex(name)
                 self._graph.add_edge(gov.id, dep.id)
 
     def find_dependents(self, token):
