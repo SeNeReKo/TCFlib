@@ -36,7 +36,8 @@ class POSTag(POSTagBase):
     CLOSED = [
         'http://www.isocat.org/datcat/DC-1372',  # punctuation
         'http://www.isocat.org/datcat/DC-1231',  # adposition
-        'http://www.isocat.org/datcat/DC-1892',  # article
+        #'http://www.isocat.org/datcat/DC-1892',  # article
+        'http://www.isocat.org/datcat/DC-1272', # determiner; includes article
         'http://www.isocat.org/datcat/DC-1342',  # particle
         'http://www.isocat.org/datcat/DC-1260',  # conjunction
         'http://www.isocat.org/datcat/DC-2998',  # pronominal adverb
