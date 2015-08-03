@@ -364,10 +364,13 @@ class TextCorpus:
 
         """
         with etree.xmlfile(file_or_path, encoding=encoding) as xf:
+            xf.write_declaration()
             with xf.element(P_DATA + 'D-Spin', nsmap={None: NS_DATA}):
+                xf.write('\n')
                 # TODO: Write MetaData.
                 with xf.element(P_TEXT + 'TextCorpus', lang=self.lang,
                                 nsmap={None: NS_TEXT}):
+                    xf.write('\n')
                     corpus_elem = self._tree.xpath('/data:D-Spin/text:TextCorpus',
                                                   namespaces=NS)[0]
                     # Write layers from the input tree.
@@ -379,6 +382,7 @@ class TextCorpus:
                         layer_elem = getattr(self, layer).tcf
                         xf.write(layer_elem, pretty_print=pretty_print)
                         layer_elem = None
+                xf.write('\n')
 
     def add_layer(self, layer):
         """Add an :class:`AnnotationLayerBase` object to the corpus."""
