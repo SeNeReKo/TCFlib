@@ -69,9 +69,9 @@ class NltkTokenizer(AddingWorker):
 
     def add_annotations(self):
         # Add base layers
-        self.corpus.tokens = Tokens()
-        self.corpus.sentences = Sentences()
-        self.corpus.textstructure = TextStructure()
+        self.corpus.add_layer(Tokens())
+        self.corpus.add_layer(Sentences())
+        self.corpus.add_layer(TextStructure())
         # Parse text
         text = self.corpus.text.text
         paragraphs = listsplit(text.splitlines(), '')
