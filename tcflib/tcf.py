@@ -400,6 +400,7 @@ class Text(AnnotationLayerBase):
     element = 'text'
 
     def __init__(self, text):
+        super().__init__()
         #: The unannotated text.
         self.text = text
 
@@ -512,6 +513,7 @@ class Wsd(AnnotationLayer):
     element = 'wsd'
 
     def __init__(self, source):
+        super().__init__()
         self.source = source
 
     @property
@@ -535,6 +537,7 @@ class POStags(AnnotationLayer):
     element = 'POStags'
 
     def __init__(self, tagset):
+        super().__init__()
         self.tagset = tagset
 
     @property
