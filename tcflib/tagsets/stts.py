@@ -52,6 +52,7 @@ class STTag(MappingTag, POSTag):
         'KOUS': 'http://www.isocat.org/datcat/DC-1393',  # subordinatingConjunction
         'NE': 'http://www.isocat.org/datcat/DC-1371',  # properNoun
         'NN': 'http://www.isocat.org/datcat/DC-1333',  # noun
+        'PAV': 'http://www.isocat.org/datcat/DC-2998',  # pronominalAdverb
         'PDAT': 'http://www.isocat.org/datcat/DC-1270',  # demonstrativePronoun
         'PDS': 'http://www.isocat.org/datcat/DC-1270',  # demonstrativePronoun
         'PIAT': 'http://www.isocat.org/datcat/DC-1309',  # indefinitePronoun
