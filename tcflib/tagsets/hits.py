@@ -87,6 +87,7 @@ class HiTag(MappingTag, POSTag):
         'PI': 'http://www.isocat.org/datcat/DC-1309',  # indefinitePronoun; Pronomen, indefinit
         'PPER': 'http://www.isocat.org/datcat/DC-3013',  # irreflexivePersonalPronoun; Pronomen, personal, irreflexiv
         'PRF': 'http://www.isocat.org/datcat/DC-3014',  # reflexivePersonalPronoun; Pronomen, personal, reflexiv
+        'PTK': 'http://www.isocat.org/datcat/DC-1342',  # particle; Antwortpartikel
         'PTKA': 'http://www.isocat.org/datcat/DC-1922',  # comparativeParticle; Partikel bei Adjektiv oder Adverb
         'PTKANT': 'http://www.isocat.org/datcat/DC-1342',  # particle; Antwortpartikel
         'PTKNEG': 'http://www.isocat.org/datcat/DC-1894',  # negativeParticle; Negationspartikel
