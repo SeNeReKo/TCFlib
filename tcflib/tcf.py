@@ -46,6 +46,7 @@ NS_TEXT = 'http://www.dspin.de/data/textcorpus'
 P_TEXT = '{' + NS_TEXT + '}'
 NS = {'data': NS_DATA, 'text': NS_TEXT}
 
+UNKNOWN_LEMMAS = ['<unknown>']
 
 class AnnotationLayerBase:
     """Base class for annotation layers."""
@@ -467,11 +468,17 @@ class Token(AnnotationElement):
         or a referenced semantic unit.
 
         """
+        def lemma_if_available(token):
+            if token.lemma and not token.lemma in UNKNOWN_LEMMAS:
+                return token.lemma
+            return token.text
+
         def disambiguate(token):
             if token.wordsenses:
-                return '{} ({})'.format(token.lemma or token.text,
+                return '{} ({})'.format(lemma_if_available(token),
                                         ', '.join(token.wordsenses))
-            return token.lemma or token.text
+            return lemma_if_available(token)
+
         tokens = None
         if self.reference:
             if self.reference.entity.extref:
