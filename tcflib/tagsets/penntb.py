@@ -47,11 +47,15 @@ class PennTag(MappingTag, POSTag):
         'NN': 'http://www.isocat.org/datcat/DC-1256',  # commonNoun
         'NNS': 'http://www.isocat.org/datcat/DC-1256',  # commonNoun
         'NP': 'http://www.isocat.org/datcat/DC-1371',  # properNoun
+        'NNP': 'http://www.isocat.org/datcat/DC-1371',  # properNoun
         'NPS': 'http://www.isocat.org/datcat/DC-1371',  # properNoun
+        'NNPS': 'http://www.isocat.org/datcat/DC-1371',  # properNoun
         'PDT': 'http://www.isocat.org/datcat/DC-1272',  # determiner FIXME
         'POS': 'http://www.isocat.org/datcat/DC-1895',  # possessiveParticle
         'PP': 'http://www.isocat.org/datcat/DC-1463',  # personalPronoun
+        'PRP': 'http://www.isocat.org/datcat/DC-1463',  # personalPronoun
         'PP$': 'http://www.isocat.org/datcat/DC-1359',  # possessivePronoun
+        'PRP$': 'http://www.isocat.org/datcat/DC-1359',  # possessivePronoun
         'RB': 'http://www.isocat.org/datcat/DC-1232',  # adverb
         'RBR': 'http://www.isocat.org/datcat/DC-1232',  # adverb
         'RBS': 'http://www.isocat.org/datcat/DC-1232',  # adverb
@@ -84,6 +88,7 @@ class PennTag(MappingTag, POSTag):
         'WRB': 'http://www.isocat.org/datcat/DC-1232',  # adverb
         '#': 'http://www.isocat.org/datcat/DC-1891',  # unclassifiedResidual FIXME
         '$': 'http://www.isocat.org/datcat/DC-1891',  # unclassifiedResidual FIXME
+        '.': 'http://www.isocat.org/datcat/DC-2075',  # mainPunctuation
         '"': 'http://www.isocat.org/datcat/DC-2076',  # secondaryPunctuation  FIXME
         '``': 'http://www.isocat.org/datcat/DC-2076',  # secondaryPunctuation  FIXME
         "''": 'http://www.isocat.org/datcat/DC-2076',  # secondaryPunctuation  FIXME
