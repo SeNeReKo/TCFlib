@@ -52,7 +52,8 @@ class WordSampler(Worker):
                 tokens_to_keep.extend(sentence.tokens)
         # Step 2: Remove all annotations that point to obsolete tokens
         # TODO: Implement all possible layers
-        for layer_name in ('sentences', 'lemmas', 'postags'):
+        for layer_name in ('sentences', 'lemmas', 'postags',
+                           'depparsing', 'namedentities'):
             try:
                 layer = getattr(self.corpus, layer_name)
             except AttributeError:
@@ -67,10 +68,16 @@ class WordSampler(Worker):
             removable = []
             for elem in layer:
                 keep = False
-                for token in elem.tokens:
-                    if token in tokens_to_keep:
-                        keep = True
-                        continue
+                try:
+                    for token in elem.tokens:
+                        if token in tokens_to_keep:
+                            keep = True
+                            continue
+                except AttributeError:
+                    # Layer element has no tokens attribute.
+                    # TODO: Implement more complex layers like depparsing.
+                    # We simply delete everything now.
+                    pass
                 if not keep:
                     removable.append(elem)
             if isinstance(layer, AnnotationLayer):
