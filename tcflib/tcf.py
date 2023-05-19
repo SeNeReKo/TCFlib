@@ -905,6 +905,21 @@ class Graph(AnnotationLayerBase):
         self._graph.vs['name'] = ''  # Ensure 'name' attribute is present.
         self.label = label
         self.weight = weight
+        # Calculate cooccurrence measures
+        # The actual calculation happens in `self.tcf()`, since only then
+        # the graph is complete.
+        self.supported_measures = ('llr', 'pmi')
+        if self.weight in self.supported_measures:
+            try:
+                import nltk
+                bigram_measures = nltk.collocations.BigramAssocMeasures()
+            except ImportError:
+                logging.error('NLTK needs to be installed '
+                              'for cooccurrence measures.')
+            if self.weight == 'llr':
+                self.measure = bigram_measures.likelihood_ratio
+            elif self.weight == 'pmi':
+                self.measure = bigram_measures.pmi
 
         class Edge:
             def __init__(self, edge, graph):
@@ -1000,6 +1015,7 @@ class Graph(AnnotationLayerBase):
     @property
     def tcf(self):
         graph = etree.Element(P_TEXT + 'graph', nsmap={None: NS_TEXT})
+        graph.attrib['weight'] = self.weight
         nodes = etree.SubElement(graph, P_TEXT + 'nodes')
         edges = etree.SubElement(graph, P_TEXT + 'edges')
         nid = 'n_{}'
@@ -1010,10 +1026,17 @@ class Graph(AnnotationLayerBase):
         # simplify the graph, i.e., merge
         #self._graph.simplify(combine_edges={'weight': sum,
         #                     'tokens': lambda x: list(chain.from_iterable(x))})
+        if self.weight in self.supported_measures:
+            # Since we re-calculate the weight, we copy over the counts
+            # to a new attribute.
+            self._graph.es['count'] = self._graph.es['weight']
+            n_xx = self._graph.vcount()
         for vertex in self._graph.vs:
             node = etree.SubElement(nodes, P_TEXT + 'node')
             node.text = vertex['name']
             node.set('ID', nid.format(vertex.index))
+            # Add token count
+            vertex['count'] = len(vertex['tokens'])
             for key, value in vertex.attributes().items():
                 if key == 'name':
                     continue
@@ -1030,6 +1053,25 @@ class Graph(AnnotationLayerBase):
             edge = etree.SubElement(edges, P_TEXT + 'edge',
                                     source=nid.format(link.source),
                                     target=nid.format(link.target))
+            if self.weight in self.supported_measures:
+                # Re-calculate weight
+                n_ii = link['count']
+                n_ix = self._graph.vs[link.source]['count']
+                n_xi = self._graph.vs[link.target]['count']
+                try:
+                    stat = self.measure(
+                        n_ii, (n_ix, n_xi), n_xx)
+                except ValueError:
+                    # Cooccurrence count might be higher than individual counts
+                    # when two occurrences of the same word appear close.
+                    # TODO: Check what the literature suggests here.
+                    logging.debug(f'Skewed values for edge {link.source}, '
+                                 f'{link.target}: '
+                                 f'{n_ii}, ({n_ix}, {n_xi}), {n_xx}')
+                    # We fix this by using the minimum.
+                    stat = self.measure(
+                        min(n_ii, n_ix, n_xi), (n_ix, n_xi), n_xx)
+                link['weight'] = stat
             for key, value in link.attributes().items():
                 if key == 'tokens':
                     for (a, b), weight in value.items():
