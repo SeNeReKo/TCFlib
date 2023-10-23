@@ -41,6 +41,7 @@ class UDTag(MappingTag, POSTag):
         'http://www.isocat.org/datcat/DC-1342',
         'http://www.isocat.org/datcat/DC-1370',
         'http://www.isocat.org/datcat/DC-1393',
+        'http://www.isocat.org/datcat/DC-1372',
     ]
     name2pid = {
         'ADJ': 'http://www.isocat.org/datcat/DC-1230',  # adjective
